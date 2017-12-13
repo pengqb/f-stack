@@ -984,7 +984,7 @@ process_dispatch_ring(uint8_t port_id, uint16_t queue_id,
     /* read packet from ring buf and to process */
     uint16_t nb_rb;
     nb_rb = rte_ring_dequeue_burst(dispatch_ring[port_id][queue_id],
-        (void **)pkts_burst, MAX_PKT_BURST);
+        (void **)pkts_burst, MAX_PKT_BURST,NULL);
 
     if(nb_rb > 0) {
         process_packets(port_id, queue_id, pkts_burst, nb_rb, ctx, 1);
