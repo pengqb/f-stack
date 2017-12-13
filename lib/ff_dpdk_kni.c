@@ -36,6 +36,7 @@
 #include <rte_ip.h>
 #include <rte_tcp.h>
 #include <rte_udp.h>
+#include <rte_bus_pci.h>
 
 #include "ff_dpdk_kni.h"
 #include "ff_config.h"
@@ -123,13 +124,13 @@ kni_set_bitmap(const char *p, unsigned char *port_bitmap)
 
 /* Currently we don't support change mtu. */
 static int
-kni_change_mtu(uint8_t port_id, unsigned new_mtu)
+kni_change_mtu(uint16_t port_id, unsigned new_mtu)
 {
     return 0;
 }
 
 static int
-kni_config_network_interface(uint8_t port_id, uint8_t if_up)
+kni_config_network_interface(uint16_t port_id, uint8_t if_up)
 {
     int ret = 0;
 
