@@ -7,3 +7,4 @@
 *.so
 *.swap
 cmake-build-debug/
+tags

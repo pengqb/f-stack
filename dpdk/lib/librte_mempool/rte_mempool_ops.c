@@ -52,6 +52,7 @@ rte_mempool_register_ops(const struct rte_mempool_ops *h)
 	struct rte_mempool_ops *ops;
 	int16_t ops_index;
 
+	printf("pqb register1=\n");
 	rte_spinlock_lock(&rte_mempool_ops_table.sl);
 
 	if (rte_mempool_ops_table.num_ops >=
@@ -78,6 +79,7 @@ rte_mempool_register_ops(const struct rte_mempool_ops *h)
 		return -EEXIST;
 	}
 
+	printf("pqb register2=\n");
 	ops_index = rte_mempool_ops_table.num_ops++;
 	ops = &rte_mempool_ops_table.ops[ops_index];
 	snprintf(ops->name, sizeof(ops->name), "%s", h->name);
@@ -163,8 +165,9 @@ rte_mempool_set_ops_byname(struct rte_mempool *mp, const char *name,
 	/* too late, the mempool is already populated. */
 	if (mp->flags & MEMPOOL_F_POOL_CREATED)
 		return -EEXIST;
-
+  printf("pqb name=%s\n", name);
 	for (i = 0; i < rte_mempool_ops_table.num_ops; i++) {
+		printf("pqb name=%s,ops[i].name=%s\n", name,rte_mempool_ops_table.ops[i].name);
 		if (!strcmp(name,
 				rte_mempool_ops_table.ops[i].name)) {
 			ops = &rte_mempool_ops_table.ops[i];

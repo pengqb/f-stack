@@ -106,7 +106,13 @@ int loop(void *arg)
 
 int main(int argc, char * argv[])
 {
-    ff_init(argc, argv);
+ 		int num = 103;
+		for(int i =0;i<5;i++){
+			num += i;
+			printf("num:%d\n", num);
+		}
+		printf("num:%d\n", num);
+		ff_init(argc, argv);
 
     sockfd = ff_socket(AF_INET, SOCK_STREAM, 0);
     printf("sockfd:%d\n", sockfd);

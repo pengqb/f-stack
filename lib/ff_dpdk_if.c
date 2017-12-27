@@ -367,6 +367,7 @@ init_mem_pool(void)
     uint16_t i, lcore_id;
     char s[64];
 
+		printf("pqb nb_ports=%d,nb_lcores=%d\n", nb_ports,nb_lcores);
     for (i = 0; i < ff_global_cfg.dpdk.nb_procs; i++) {
         lcore_id = ff_global_cfg.dpdk.proc_lcore[i];
         if (numa_on) {
@@ -384,6 +385,9 @@ init_mem_pool(void)
 
         if (rte_eal_process_type() == RTE_PROC_PRIMARY) {
             snprintf(s, sizeof(s), "mbuf_pool_%d", socketid);
+
+						printf("pqb s=%s,nb_mbuf=%d\n", s,nb_mbuf);
+
             pktmbuf_pool[socketid] =
                 rte_pktmbuf_pool_create(s, nb_mbuf,
                     MEMPOOL_CACHE_SIZE, 0,
