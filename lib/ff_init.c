@@ -25,7 +25,7 @@
  */
 
 #include <stdlib.h>
-
+#include <rte_mempool.h>
 #include "ff_api.h"
 #include "ff_config.h"
 #include "ff_dpdk_if.h"
