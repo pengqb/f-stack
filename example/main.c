@@ -94,8 +94,7 @@ int loop(void *arg)
             char buf[256];
             size_t readlen = ff_read(clientfd, buf, sizeof(buf));
 
-            printf("bytes %zu are available to read...,fd:%d\n", (size_t)event.data, clientfd);
-
+            printf("bytes %zu are available to read...,data:%s,fd:%d\n", (size_t)event.data, buf, clientfd);
             ff_write(clientfd, html, sizeof(html));
 
         } else {
