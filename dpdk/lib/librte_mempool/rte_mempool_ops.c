@@ -52,7 +52,6 @@ rte_mempool_register_ops(const struct rte_mempool_ops *h)
 	struct rte_mempool_ops *ops;
 	int16_t ops_index;
 
-	printf("pqb register1=\n");
 	rte_spinlock_lock(&rte_mempool_ops_table.sl);
 
 	if (rte_mempool_ops_table.num_ops >=
@@ -79,7 +78,6 @@ rte_mempool_register_ops(const struct rte_mempool_ops *h)
 		return -EEXIST;
 	}
 
-	printf("pqb register2=\n");
 	ops_index = rte_mempool_ops_table.num_ops++;
 	ops = &rte_mempool_ops_table.ops[ops_index];
 	snprintf(ops->name, sizeof(ops->name), "%s", h->name);
