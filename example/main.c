@@ -88,7 +88,7 @@ int loop(void *arg)
 
             assert(ff_kevent(kq, &kevSet, 1, NULL, 0, NULL) == 0);
 
-            //printf("A new client connected to the server..., fd:%d\n", nclientfd);
+            printf("A new client connected to the server..., fd:%d\n", nclientfd);
 
         } else if (event.filter == EVFILT_READ) {
             char buf[256];
