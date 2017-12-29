@@ -70,7 +70,7 @@ int loop(void *arg)
             /* Simply close socket */
             ff_close(clientfd);
 
-            //printf("A client has left the server...,fd:%d\n", clientfd);
+            printf("A client has left the server...,fd:%d\n", clientfd);
         } else if (clientfd == sockfd) {
             int nclientfd = ff_accept(sockfd, NULL, NULL);
             if (nclientfd < 0) {
@@ -94,7 +94,7 @@ int loop(void *arg)
             char buf[256];
             size_t readlen = ff_read(clientfd, buf, sizeof(buf));
 
-            //printf("bytes %zu are available to read...,fd:%d\n", (size_t)event.data, clientfd);
+            printf("bytes %zu are available to read...,fd:%d\n", (size_t)event.data, clientfd);
 
             ff_write(clientfd, html, sizeof(html));
 
