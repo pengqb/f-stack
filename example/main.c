@@ -8,6 +8,7 @@
 #include <arpa/inet.h>
 #include <errno.h>
 #include <assert.h>
+#include  <time.h>
 
 #include "ff_config.h"
 #include "ff_api.h"
@@ -21,7 +22,9 @@ struct kevent events[MAX_EVENTS];
 /* kq */
 int kq;
 int sockfd;
-
+int nConn=0;
+int nReceiveMsg=0;
+time_t timep;
 char html[] = 
 "HTTP/1.1 200 OK\r\n";
 //"Server: F-Stack\r\n"
@@ -68,25 +71,43 @@ int loop(void *arg)
         if (event.flags & EV_EOF) {
             /* Simply close socket */
             ff_close(clientfd);
+            nConn--;
             printf("A client has left the server...,fd:%d\n", clientfd);
         } else if (clientfd == sockfd) {
-            int nclientfd = ff_accept(sockfd, NULL, NULL);
-            if (nclientfd < 0) {
-                printf("ff_accept failed:%d, %s\n", errno, strerror(errno));
-                continue;
-            }
+            int available = (int)event.data;
+            do {
+                int nclientfd = ff_accept(sockfd, NULL, NULL);
+                if (nclientfd < 0) {
+                    printf("ff_accept failed:%d, %s\n", errno,
+                           strerror(errno));
+                    break;
+                }
 
-            /* Add to event list */
-            EV_SET(&kevSet, nclientfd, EVFILT_READ, EV_ADD, 0, 0, NULL);
+                /* Add to event list */
+                EV_SET(&kevSet, nclientfd, EVFILT_READ, EV_ADD, 0, 0, NULL);
 
-            assert(ff_kevent(kq, &kevSet, 1, NULL, 0, NULL) == 0);
-
-            printf("A new client connected to the server..., fd:%d\n", nclientfd);
-
+                if(ff_kevent(kq, &kevSet, 1, NULL, 0, NULL) < 0) {
+                    printf("ff_kevent error:%d, %s\n", errno,
+                           strerror(errno));
+                    return -1;
+                }
+                nConn++;
+                if((nConn & 0x3ff) == 0x3ff){
+                    timep = time (NULL);
+                    printf("nConn=%d,time=%ld\n",nConn,timep);
+                }
+                //printf("A new client connected to the server..., fd:%d\n", nclientfd);
+                available--;
+            } while (available);
         } else if (event.filter == EVFILT_READ) {
             char buf[256];
             size_t readlen = ff_read(clientfd, buf, sizeof(buf));
-            printf("bytes %zu are available to read...,data:%s,fd:%d\n", (size_t)event.data, buf, clientfd);
+            nReceiveMsg++;
+            if((nReceiveMsg & 0x3fff) == 0x3fff){
+                timep = time (NULL);
+                printf("nReceiveMsg=%d,time=%ld\n",nReceiveMsg,timep);
+            }
+            //printf("bytes %zu are available to read...,data:%s,fd:%d\n", (size_t)event.data, buf, clientfd);
             ff_write(clientfd, html, sizeof(html));
         } else {
             printf("unknown event: %8.8X\n", event.flags);
