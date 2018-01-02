@@ -72,7 +72,11 @@ int loop(void *arg)
             /* Simply close socket */
             ff_close(clientfd);
             nConn--;
-            printf("A client has left the server...,fd:%d\n", clientfd);
+            if((nConn & 0x3ff) == 0x3ff){
+                timep = time (NULL);
+                printf("nConn=%d,time=%ld\n",nConn,timep);
+            }
+            //printf("A client has left the server...,fd:%d\n", clientfd);
         } else if (clientfd == sockfd) {
             int available = (int)event.data;
             do {

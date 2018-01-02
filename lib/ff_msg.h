@@ -92,7 +92,7 @@ struct ff_ipfw_args {
     socklen_t *optlen;
 };
 
-#define MAX_MSG_BUF_SIZE 10240
+#define MAX_MSG_BUF_SIZE 1024
 
 /* structure of ipc msg */
 struct ff_msg {
