@@ -24,8 +24,7 @@ int kq;
 int sockfd;
 int nConn=0;
 int nReceiveMsg=0;
-time_t timep;
-char html[] = 
+char html[] =
 "HTTP/1.1 200 OK\r\n";
 //"Server: F-Stack\r\n"
 //"Date: Sat, 25 Feb 2017 09:26:33 GMT\r\n"
@@ -73,8 +72,7 @@ int loop(void *arg)
             ff_close(clientfd);
             nConn--;
             if((nConn & 0x3ff) == 0x3ff){
-                timep = time (NULL);
-                printf("nConn=%d,time=%ld\n",nConn,timep);
+                printf("nConn=%d,time=%ld\n",nConn,time(NULL));
             }
             //printf("A client has left the server...,fd:%d\n", clientfd);
         } else if (clientfd == sockfd) {
@@ -97,8 +95,7 @@ int loop(void *arg)
                 }
                 nConn++;
                 if((nConn & 0x3ff) == 0x3ff){
-                    timep = time (NULL);
-                    printf("nConn=%d,time=%ld\n",nConn,timep);
+                    printf("nConn=%d,time=%ld\n",nConn,time(NULL));
                 }
                 //printf("A new client connected to the server..., fd:%d\n", nclientfd);
                 available--;
@@ -108,8 +105,7 @@ int loop(void *arg)
             size_t readlen = ff_read(clientfd, buf, sizeof(buf));
             nReceiveMsg++;
             if((nReceiveMsg & 0x3fff) == 0x3fff){
-                timep = time (NULL);
-                printf("nReceiveMsg=%d,time=%ld\n",nReceiveMsg,timep);
+                printf("nReceiveMsg=%d,time=%ld\n",nReceiveMsg,time(NULL));
             }
             //printf("bytes %zu are available to read...,data:%s,fd:%d\n", (size_t)event.data, buf, clientfd);
             ff_write(clientfd, html, sizeof(html));
