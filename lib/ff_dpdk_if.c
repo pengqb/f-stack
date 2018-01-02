@@ -63,7 +63,7 @@
 
 #define DISPATCH_RING_SIZE 2048
 
-#define MSG_RING_SIZE 32
+#define MSG_RING_SIZE 131072
 
 /*
  * Configurable number of RX/TX ring descriptors
