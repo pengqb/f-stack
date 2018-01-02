@@ -9,6 +9,7 @@ INCLUDE_DIRECTORIES(
         app/nginx-1.11.10/src/core
         app/nginx-1.11.10/src/os/unix
         dpdk/x86_64-native-linuxapp-gcc/include
+        #freebsd/sys
 )
 
 
