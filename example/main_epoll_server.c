@@ -43,32 +43,35 @@ int loop(void *arg)
 {
     for (;;) {
         /* Wait for events to happen */
-        unsigned nevents = epoll_wait(epfd,  events, MAX_EVENTS, 0);
-        unsigned i;
+        int nevents = epoll_wait(epfd,  events, MAX_EVENTS, 0);
+        int i;
         for (i = 0; i < nevents; ++i) {
             struct epoll_event event = events[i];
             int clientfd = event.data.fd;
             /* Handle new connect */
             if (isContains(clientfd, sockfds, servPorts)) {
-                while (1) {
+               // while (1) {
                     int nclientfd = accept(clientfd, NULL, NULL);
                     if (nclientfd < 0) {
-                        break;
+                       //break;
+											 printf("ff_accept failed:%d, %s\n", errno, strerror(errno));
+											 continue;
                     }
 
                     /* Add to event list */
                     ev.data.fd = nclientfd;
-                    ev.events  = EPOLLIN;
-                    if (epoll_ctl(epfd, EPOLL_CTL_ADD, nclientfd, &ev) != 0) {
-                        printf("ff_epoll_ctl failed:%d, %s\n", errno,
-                               strerror(errno));
-                        break;
-                    }
+                    ev.events  = EPOLLIN | EPOLLET;
+                    //if (epoll_ctl(epfd, EPOLL_CTL_ADD, nclientfd, &ev) != 0) {
+                    //    printf("ff_epoll_ctl failed:%d, %s\n", errno,
+                    //           strerror(errno));
+                    //    break;
+                    //}
+										assert(epoll_ctl(epfd, EPOLL_CTL_ADD, nclientfd, &ev) == 0);
                     if((++nConn & 0x3ff) == 0x3ff){
                         printf("nConn=%d,time=%ld\n",nConn,time(NULL));
                     }
-                    //printf("A new client connected to the server..., fd:%d\n", nclientfd);
-                }
+                //    printf("A new client connected to the server..., fd:%d\n", nclientfd);
+               // }
             } else {
                 if (event.events & EPOLLERR ) {
                     /* Simply close socket */
@@ -77,11 +80,11 @@ int loop(void *arg)
                     if((--nConn & 0x3ff) == 0x3ff){
                         printf("nConn=%d,time=%ld\n",nConn,time(NULL));
                     }
-                    //printf("A client has left the server...,fd:%d\n", events[i].data.fd);
+                  //  printf("A client has left the server...,fd:%d\n", events[i].data.fd);
                 } else if (event.events & EPOLLIN) {
                     char buf[256];
                     size_t readlen = read( clientfd, buf, sizeof(buf));
-                    //printf("bytes are available to read..., readlen:%d, fd:%d\n", readlen,  events[i].data.fd);
+                   // printf("bytes are available to read, readlen:%d,data:%s, fd:%d\n", readlen,buf, events[i].data.fd);
                     if(readlen > 0) {
                         if((++nReceiveMsg & 0x3fff) == 0x3fff){
                             printf("nReceiveMsg=%d,time=%ld\n",nReceiveMsg,time(NULL));
@@ -93,7 +96,7 @@ int loop(void *arg)
                         if((--nConn & 0x3ff) == 0x3ff){
                             printf("nConn=%d,time=%ld\n",nConn,time(NULL));
                         }
-                        //printf("A client has left the server...,fd:%d\n", events[i].data.fd);
+                     //   printf("A client has left the server...,fd:%d\n", events[i].data.fd);
                     }
                 } else {
                     printf("unknown event: %8.8X\n", events[i].events);
@@ -143,7 +146,7 @@ int main(int argc, char * argv[])
         }
         sockfdArray[i] = sockfd;
         ev.data.fd = sockfd;
-        ev.events = EPOLLIN;
+        ev.events = EPOLLIN | EPOLLET;
         epoll_ctl(epfd, EPOLL_CTL_ADD, sockfd, &ev);
     }
     sockfds = sockfdArray;
