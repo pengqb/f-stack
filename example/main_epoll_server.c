@@ -116,7 +116,7 @@ int main(int argc, char * argv[])
     printf("begin_port: %d end_port %d processes: %d man_port %d\n", beginPort, endPort, processes, man_port);
     servPorts = endPort - beginPort;
     int sockfdArray[servPorts];
-    assert((epfd = epoll_create(0)) > 0);
+    assert((epfd = epoll_create(256)) > 0);
     for (int i = 0; i < servPorts; i++) {
         int sockfd = socket(AF_INET, SOCK_STREAM, 0);
         printf("sockfd:%d\n", sockfd);
@@ -128,7 +128,7 @@ int main(int argc, char * argv[])
         struct sockaddr_in my_addr;
         bzero(&my_addr, sizeof(my_addr));
         my_addr.sin_family = AF_INET;
-        my_addr.sin_port = htons(80);
+        my_addr.sin_port = htons(beginPort + i);
         my_addr.sin_addr.s_addr = htonl(INADDR_ANY);
 				int ret = bind(sockfd, (struct sockaddr *) &my_addr, sizeof(struct sockaddr));
         if (ret < 0) {
