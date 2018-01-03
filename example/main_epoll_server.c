@@ -18,8 +18,8 @@
 #include <time.h>
 
 #define MAX_EVENTS 128
-int nConn=0;
-int nReceiveMsg=0;
+int nConn = 0;
+int nReceiveMsg = 0;
 int servPorts;
 struct epoll_event ev;
 struct epoll_event events[MAX_EVENTS];
@@ -28,12 +28,14 @@ int epfd;
 int *sockfds;
 
 char html[] = "HTTP/1.1 200 OK";
-int setnonblocking(int sockfd){
-		if (fcntl(sockfd, F_SETFL, fcntl(sockfd, F_GETFD, 0)|O_NONBLOCK) == -1) {
-				return -1;
-		}
-	  return 0;
+
+int setnonblocking(int sockfd) {
+    if (fcntl(sockfd, F_SETFL, fcntl(sockfd, F_GETFD, 0) | O_NONBLOCK) == -1) {
+        return -1;
+    }
+    return 0;
 }
+
 bool isContains(int elem, int *container, int nElems) {
     bool isContains = false;
     for (int i = 0; i < nElems; i++) {
@@ -45,67 +47,66 @@ bool isContains(int elem, int *container, int nElems) {
     return isContains;
 }
 
-int loop(void *arg)
-{
+int loop(void *arg) {
     for (;;) {
         /* Wait for events to happen */
-        int nevents = epoll_wait(epfd,  events, MAX_EVENTS, -1);
+        int nevents = epoll_wait(epfd, events, MAX_EVENTS, -1);
         int i;
         for (i = 0; i < nevents; ++i) {
             struct epoll_event event = events[i];
             int clientfd = event.data.fd;
             /* Handle new connect */
             if (isContains(clientfd, sockfds, servPorts)) {
-               // while (1) {
-                    int nclientfd = accept(clientfd, NULL, NULL);
-                    if (nclientfd < 0) {
-                       //break;
-											 printf("ff_accept failed:%d, %s\n", errno, strerror(errno));
-											 continue;
-                    }
+                // while (1) {
+                int nclientfd = accept(clientfd, NULL, NULL);
+                if (nclientfd < 0) {
+                    //break;
+                    printf("ff_accept failed:%d, %s\n", errno, strerror(errno));
+                    continue;
+                }
 
-                    int ret = setnonblocking(nclientfd);
-										if (ret < 0) {
-												printf("setnonblocking failed:%d, %s\n", errno, strerror(errno));
-												continue;
-										}
-										/* Add to event list */
-                    ev.data.fd = nclientfd;
-                    ev.events  = EPOLLIN;// | EPOLLET;
-                    //if (epoll_ctl(epfd, EPOLL_CTL_ADD, nclientfd, &ev) != 0) {
-                    //    printf("ff_epoll_ctl failed:%d, %s\n", errno,
-                    //           strerror(errno));
-                    //    break;
-                    //}
-										assert(epoll_ctl(epfd, EPOLL_CTL_ADD, nclientfd, &ev) == 0);
-                    if((++nConn & 0x3ff) == 0x3ff){
-                        printf("nConn=%d,time=%ld\n",nConn,time(NULL));
-                    }
-                    //printf("A new client connected to the server..., fd:%d\n", nclientfd);
-               // }
+                int ret = setnonblocking(nclientfd);
+                if (ret < 0) {
+                    printf("setnonblocking failed:%d, %s\n", errno, strerror(errno));
+                    continue;
+                }
+                /* Add to event list */
+                ev.data.fd = nclientfd;
+                ev.events = EPOLLIN;// | EPOLLET;
+                //if (epoll_ctl(epfd, EPOLL_CTL_ADD, nclientfd, &ev) != 0) {
+                //    printf("ff_epoll_ctl failed:%d, %s\n", errno,
+                //           strerror(errno));
+                //    break;
+                //}
+                assert(epoll_ctl(epfd, EPOLL_CTL_ADD, nclientfd, &ev) == 0);
+                if ((++nConn & 0x3ff) == 0x3ff) {
+                    printf("nConn=%d,time=%ld\n", nConn, time(NULL));
+                }
+                //printf("A new client connected to the server..., fd:%d\n", nclientfd);
+                // }
             } else {
-                if (event.events & EPOLLERR ) {
+                if (event.events & EPOLLERR) {
                     /* Simply close socket */
-                    epoll_ctl(epfd, EPOLL_CTL_DEL,  clientfd, NULL);
+                    epoll_ctl(epfd, EPOLL_CTL_DEL, clientfd, NULL);
                     close(clientfd);
-                    if((--nConn & 0x3ff) == 0x3ff){
-                        printf("nConn=%d,time=%ld\n",nConn,time(NULL));
+                    if ((--nConn & 0x3ff) == 0x3ff) {
+                        printf("nConn=%d,time=%ld\n", nConn, time(NULL));
                     }
                     //printf("A client has left the server...,fd:%d\n", events[i].data.fd);
                 } else if (event.events & EPOLLIN) {
-                    char buf[256];
-                    size_t readlen = read( clientfd, buf, sizeof(buf));
+                    char buf[MAX_EVENTS];
+                    size_t readlen = read(clientfd, buf, sizeof(buf));
                     //printf("bytes are available to read, readlen:%d,data:%s, fd:%d\n", readlen,buf, events[i].data.fd);
-                    if(readlen > 0) {
-                        if((++nReceiveMsg & 0x3fff) == 0x3fff){
-                            printf("nReceiveMsg=%d,time=%ld\n",nReceiveMsg,time(NULL));
+                    if (readlen > 0) {
+                        if ((++nReceiveMsg & 0x3fff) == 0x3fff) {
+                            printf("nReceiveMsg=%d,time=%ld\n", nReceiveMsg, time(NULL));
                         }
-                        write( events[i].data.fd, html, sizeof(html));
+                        write(events[i].data.fd, html, sizeof(html));
                     } else {
-                        epoll_ctl(epfd, EPOLL_CTL_DEL,  events[i].data.fd, NULL);
-                        close( events[i].data.fd);
-                        if((--nConn & 0x3ff) == 0x3ff){
-                            printf("nConn=%d,time=%ld\n",nConn,time(NULL));
+                        epoll_ctl(epfd, EPOLL_CTL_DEL, events[i].data.fd, NULL);
+                        close(events[i].data.fd);
+                        if ((--nConn & 0x3ff) == 0x3ff) {
+                            printf("nConn=%d,time=%ld\n", nConn, time(NULL));
                         }
                         //printf("A client has left the server...,fd:%d\n", events[i].data.fd);
                     }
@@ -117,8 +118,7 @@ int loop(void *arg)
     }
 }
 
-int main(int argc, char * argv[])
-{
+int main(int argc, char *argv[]) {
     if (argc < 5) {
         printf("usage: %s <begin port> <end port> <subprocesses> <management port>\n", argv[0]);
         return 1;
@@ -144,7 +144,7 @@ int main(int argc, char * argv[])
         my_addr.sin_family = AF_INET;
         my_addr.sin_port = htons(beginPort + i);
         my_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-				int ret = bind(sockfd, (struct sockaddr *) &my_addr, sizeof(struct sockaddr));
+        int ret = bind(sockfd, (struct sockaddr *) &my_addr, sizeof(struct sockaddr));
         if (ret < 0) {
             printf("ff_bind failed\n");
             exit(1);
