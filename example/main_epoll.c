@@ -65,18 +65,23 @@ int loop(void *arg)
     for (i = 0; i < nevents; ++i) {
         /* Handle new connect */
         if (events[i].data.fd == sockfd) {
-            int nclientfd = ff_accept(sockfd, NULL, NULL);
-            if (nclientfd < 0) {
-                printf("ff_accept failed:%d, %s\n", errno, strerror(errno));
-                continue;
-            }
+            while (1) {
+                int nclientfd = ff_accept(sockfd, NULL, NULL);
+                if (nclientfd < 0) {
+                    break;
+                }
 
-            /* Add to event list */
-            ev.data.fd = nclientfd;
-            ev.events  = EPOLLIN;
-            assert(ff_epoll_ctl(epfd, EPOLL_CTL_ADD, nclientfd, &ev) == 0);
-            //printf("A new client connected to the server..., fd:%d\n", nclientfd);
-        } else { 
+                /* Add to event list */
+                ev.data.fd = nclientfd;
+                ev.events  = EPOLLIN;
+                if (ff_epoll_ctl(epfd, EPOLL_CTL_ADD, nclientfd, &ev) != 0) {
+                    printf("ff_epoll_ctl failed:%d, %s\n", errno,
+                           strerror(errno));
+                    break;
+                }
+                //printf("A new client connected to the server..., fd:%d\n", nclientfd);
+            }
+        } else {
             if (events[i].events & EPOLLERR ) {
                 /* Simply close socket */
                 ff_epoll_ctl(epfd, EPOLL_CTL_DEL,  events[i].data.fd, NULL);
