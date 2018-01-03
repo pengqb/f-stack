@@ -9,11 +9,12 @@
 #include <strings.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/epoll.h>
 #include <arpa/inet.h>
 #include <errno.h>
 #include <assert.h>
 #include <stdbool.h>
-#include  <time.h>
+#include <time.h>
 
 #define MAX_EVENTS 512
 int nConn=0;
@@ -23,7 +24,7 @@ struct epoll_event ev;
 struct epoll_event events[MAX_EVENTS];
 
 int epfd;
-int *sockfd;
+int *sockfds;
 
 char html[] = "HTTP/1.1 200 OK";
 
@@ -50,7 +51,7 @@ int loop(void *arg)
             /* Handle new connect */
             if (isContains(clientfd, sockfds, servPorts)) {
                 while (1) {
-                    int nclientfd = accept(sockfd, NULL, NULL);
+                    int nclientfd = accept(clientfd, NULL, NULL);
                     if (nclientfd < 0) {
                         break;
                     }
@@ -117,7 +118,7 @@ int main(int argc, char * argv[])
     int sockfdArray[servPorts];
     assert((epfd = epoll_create(0)) > 0);
     for (int i = 0; i < servPorts; i++) {
-        sockfd = socket(AF_INET, SOCK_STREAM, 0);
+        int sockfd = socket(AF_INET, SOCK_STREAM, 0);
         printf("sockfd:%d\n", sockfd);
         if (sockfd < 0) {
             printf("ff_socket failed\n");
@@ -129,8 +130,7 @@ int main(int argc, char * argv[])
         my_addr.sin_family = AF_INET;
         my_addr.sin_port = htons(80);
         my_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-
-        int ret = bind(sockfd, (struct linux_sockaddr *)&my_addr, sizeof(my_addr));
+				int ret = bind(sockfd, (struct sockaddr *) &my_addr, sizeof(struct sockaddr));
         if (ret < 0) {
             printf("ff_bind failed\n");
             exit(1);
