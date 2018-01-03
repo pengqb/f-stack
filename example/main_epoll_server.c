@@ -10,13 +10,14 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/epoll.h>
+#include <fcntl.h>
 #include <arpa/inet.h>
 #include <errno.h>
 #include <assert.h>
 #include <stdbool.h>
 #include <time.h>
 
-#define MAX_EVENTS 512
+#define MAX_EVENTS 128
 int nConn=0;
 int nReceiveMsg=0;
 int servPorts;
@@ -27,7 +28,12 @@ int epfd;
 int *sockfds;
 
 char html[] = "HTTP/1.1 200 OK";
-
+int setnonblocking(int sockfd){
+		if (fcntl(sockfd, F_SETFL, fcntl(sockfd, F_GETFD, 0)|O_NONBLOCK) == -1) {
+				return -1;
+		}
+	  return 0;
+}
 bool isContains(int elem, int *container, int nElems) {
     bool isContains = false;
     for (int i = 0; i < nElems; i++) {
@@ -43,7 +49,7 @@ int loop(void *arg)
 {
     for (;;) {
         /* Wait for events to happen */
-        int nevents = epoll_wait(epfd,  events, MAX_EVENTS, 0);
+        int nevents = epoll_wait(epfd,  events, MAX_EVENTS, -1);
         int i;
         for (i = 0; i < nevents; ++i) {
             struct epoll_event event = events[i];
@@ -58,9 +64,14 @@ int loop(void *arg)
 											 continue;
                     }
 
-                    /* Add to event list */
+                    int ret = setnonblocking(nclientfd);
+										if (ret < 0) {
+												printf("setnonblocking failed:%d, %s\n", errno, strerror(errno));
+												continue;
+										}
+										/* Add to event list */
                     ev.data.fd = nclientfd;
-                    ev.events  = EPOLLIN | EPOLLET;
+                    ev.events  = EPOLLIN;// | EPOLLET;
                     //if (epoll_ctl(epfd, EPOLL_CTL_ADD, nclientfd, &ev) != 0) {
                     //    printf("ff_epoll_ctl failed:%d, %s\n", errno,
                     //           strerror(errno));
@@ -70,7 +81,7 @@ int loop(void *arg)
                     if((++nConn & 0x3ff) == 0x3ff){
                         printf("nConn=%d,time=%ld\n",nConn,time(NULL));
                     }
-                //    printf("A new client connected to the server..., fd:%d\n", nclientfd);
+                    //printf("A new client connected to the server..., fd:%d\n", nclientfd);
                // }
             } else {
                 if (event.events & EPOLLERR ) {
@@ -80,11 +91,11 @@ int loop(void *arg)
                     if((--nConn & 0x3ff) == 0x3ff){
                         printf("nConn=%d,time=%ld\n",nConn,time(NULL));
                     }
-                  //  printf("A client has left the server...,fd:%d\n", events[i].data.fd);
+                    //printf("A client has left the server...,fd:%d\n", events[i].data.fd);
                 } else if (event.events & EPOLLIN) {
                     char buf[256];
                     size_t readlen = read( clientfd, buf, sizeof(buf));
-                   // printf("bytes are available to read, readlen:%d,data:%s, fd:%d\n", readlen,buf, events[i].data.fd);
+                    //printf("bytes are available to read, readlen:%d,data:%s, fd:%d\n", readlen,buf, events[i].data.fd);
                     if(readlen > 0) {
                         if((++nReceiveMsg & 0x3fff) == 0x3fff){
                             printf("nReceiveMsg=%d,time=%ld\n",nReceiveMsg,time(NULL));
@@ -96,7 +107,7 @@ int loop(void *arg)
                         if((--nConn & 0x3ff) == 0x3ff){
                             printf("nConn=%d,time=%ld\n",nConn,time(NULL));
                         }
-                     //   printf("A client has left the server...,fd:%d\n", events[i].data.fd);
+                        //printf("A client has left the server...,fd:%d\n", events[i].data.fd);
                     }
                 } else {
                     printf("unknown event: %8.8X\n", events[i].events);
@@ -146,7 +157,7 @@ int main(int argc, char * argv[])
         }
         sockfdArray[i] = sockfd;
         ev.data.fd = sockfd;
-        ev.events = EPOLLIN | EPOLLET;
+        ev.events = EPOLLIN;// | EPOLLET;
         epoll_ctl(epfd, EPOLL_CTL_ADD, sockfd, &ev);
     }
     sockfds = sockfdArray;
