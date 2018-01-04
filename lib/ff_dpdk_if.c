@@ -59,11 +59,11 @@
 #include "ff_msg.h"
 #include "ff_api.h"
 
-#define MEMPOOL_CACHE_SIZE 256
+#define MEMPOOL_CACHE_SIZE 2048
 
 #define DISPATCH_RING_SIZE 2048
 
-#define MSG_RING_SIZE 131072
+#define MSG_RING_SIZE 4096
 
 /*
  * Configurable number of RX/TX ring descriptors
