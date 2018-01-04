@@ -30,7 +30,7 @@ int *sockfds;
 char html[] = "HTTP/1.1 200 OK";
 
 int setnonblocking(int sockfd) {
-    if (fcntl(sockfd, F_SETFL, fcntl(sockfd, F_GETFD, 0) | O_NONBLOCK) == -1) {
+    if (fcntl(sockfd, F_SETFL, fcntl(sockfd, F_GETFL, 0) | O_NONBLOCK) == -1) {
         return -1;
     }
     return 0;
