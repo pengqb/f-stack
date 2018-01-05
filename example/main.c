@@ -71,7 +71,7 @@ int loop(void *arg)
             /* Simply close socket */
             ff_close(clientfd);
             nConn--;
-            if((nConn & 0x3ff) == 0x3ff){
+            if((nConn & 0xfff) == 0xfff){
                 printf("nConn=%d,time=%ld\n",nConn,time(NULL));
             }
             //printf("A client has left the server...,fd:%d\n", clientfd);
@@ -94,7 +94,7 @@ int loop(void *arg)
                     return -1;
                 }
                 nConn++;
-                if((nConn & 0x3ff) == 0x3ff){
+                if((nConn & 0xfff) == 0xfff){
                     printf("nConn=%d,time=%ld\n",nConn,time(NULL));
                 }
                 //printf("A new client connected to the server..., fd:%d\n", nclientfd);

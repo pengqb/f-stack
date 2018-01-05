@@ -30,7 +30,7 @@ int *sockfds;
 char html[] = "HTTP/1.1 200 OK";
 
 int setnonblocking(int sockfd) {
-    if (fcntl(sockfd, F_SETFL, fcntl(sockfd, F_GETFL, 0) | O_NONBLOCK) == -1) {
+    if (fcntl(sockfd, F_SETFL, fcntl(sockfd, F_GETFL, 0) | O_NONBLOCK | O_ASYNC) == -1) {
         return -1;
     }
     return 0;
@@ -79,7 +79,7 @@ int loop(void *arg) {
                 //    break;
                 //}
                 assert(epoll_ctl(epfd, EPOLL_CTL_ADD, nclientfd, &ev) == 0);
-                if ((++nConn & 0x3ff) == 0x3ff) {
+                if ((++nConn & 0xfff) == 0xfff) {
                     printf("nConn=%d,time=%ld\n", nConn, time(NULL));
                 }
                 //printf("A new client connected to the server..., fd:%d\n", nclientfd);
@@ -89,7 +89,7 @@ int loop(void *arg) {
                     /* Simply close socket */
                     epoll_ctl(epfd, EPOLL_CTL_DEL, clientfd, NULL);
                     close(clientfd);
-                    if ((--nConn & 0x3ff) == 0x3ff) {
+                    if ((--nConn & 0xfff) == 0xfff) {
                         printf("nConn=%d,time=%ld\n", nConn, time(NULL));
                     }
                     //printf("A client has left the server...,fd:%d\n", events[i].data.fd);
@@ -105,7 +105,7 @@ int loop(void *arg) {
                     } else {
                         epoll_ctl(epfd, EPOLL_CTL_DEL, events[i].data.fd, NULL);
                         close(events[i].data.fd);
-                        if ((--nConn & 0x3ff) == 0x3ff) {
+                        if ((--nConn & 0xfff) == 0xfff) {
                             printf("nConn=%d,time=%ld\n", nConn, time(NULL));
                         }
                         //printf("A client has left the server...,fd:%d\n", events[i].data.fd);

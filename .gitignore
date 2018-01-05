@@ -8,3 +8,6 @@
 *.swap
 cmake-build-debug/
 tags
+helloworld
+helloworld_epoll
+dpdk/x86_64-native-linuxapp-gcc
