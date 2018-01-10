@@ -9,6 +9,7 @@
 #include <stdbool.h>
 #include <zconf.h>
 #include <time.h>
+#include <errno.h>
 #include "ff_api.h"
 
 int nConn = 0;
@@ -46,21 +47,23 @@ int main(int argc, char *argv[]) {
             /*分配一个网络通信套接字，监听文件描述符sockfd*/
             int sockfd = ff_socket(PF_INET, SOCK_STREAM, 0);
             if (sockfd < 0) {
-                printf("ff_socket failed\n");
+                printf("ff_socket failed:%d, %s\n", errno,
+                       strerror(errno));
                 exit(1);
             }
             //设置端口复用
             ff_setsockopt(sockfd, SOL_SOCKET, SO_REUSEPORT, (const void *) &opt, sizeof(opt));
             int ret = ff_connect(sockfd, (struct linux_sockaddr *) &my_addr, sizeof(my_addr));
             if (ret < 0) {
-                printf("ff_connect failed\n");
+                printf("ff_connect failed:%d, %s\n", errno,
+                       strerror(errno));
                 exit(1);
             }
             if ((++nConn & 0xfff) == 0xfff) {
                 printf("nCConn=%d,time=%ld\n", nConn, time(NULL));
                 //select(0, NULL, NULL, NULL, &delay);
             }
-            //printf("sockfd:%d conn servip: %s port: %d\n", sockfd, serIp, port);
+            printf("sockfd:%d conn servip: %s port: %d\n", sockfd, serIp, port);
             sockfds[l][i] = sockfd;
             //}
         }
