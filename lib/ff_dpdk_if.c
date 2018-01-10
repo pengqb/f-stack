@@ -72,7 +72,7 @@
 #define TX_QUEUE_SIZE 512
 
 #define MAX_PKT_BURST 32
-#define BURST_TX_DRAIN_US 100 /* TX drain every ~100us */
+#define BURST_TX_DRAIN_US 8 /* TX drain every ~100us */
 
 /*
  * Try to avoid TX buffering if we have at least MAX_TX_BURST packets to send.
@@ -1329,40 +1329,45 @@ main_loop(void *arg)
     struct loop_routine *lr = (struct loop_routine *)arg;
 
     struct rte_mbuf *pkts_burst[MAX_PKT_BURST];
-    uint64_t prev_tsc, diff_tsc, cur_tsc, usch_tsc, div_tsc, usr_tsc, sys_tsc, end_tsc;
-    int i, j, nb_rx, idle;
+    uint64_t cur_tsc, usch_tsc, div_tsc;//prev_tsc,diff_tsc, usr_tsc, sys_tsc, end_tsc;
+    long t_loops=0,r_loops=0,u_loops=0,t_idle_count=0,r_idle_count=0;
+		int i, j,nb_rx;
+	  long t_idle,r_idle;
     uint8_t port_id, queue_id;
     struct lcore_conf *qconf;
     const uint64_t drain_tsc = (rte_get_tsc_hz() + US_PER_S - 1) /
         US_PER_S * BURST_TX_DRAIN_US;
     struct ff_dpdk_if_context *ctx;
 
-    prev_tsc = 0;
+    //prev_tsc = 0;
     usch_tsc = 0;
 
     qconf = &lcore_conf;
 
     while (1) {
         cur_tsc = rte_rdtsc();
-        if (unlikely(freebsd_clock.expire < cur_tsc)) {
-            rte_timer_manage();
-        }
+        //if (unlikely(freebsd_clock.expire < cur_tsc)) {
+        //    printf("rte_timer_m,expire=%lu,cur_tsc=%lu\n",freebsd_clock.expire,cur_tsc);
+				//		rte_timer_manage();
+        //}
 
-        idle = 1;
-        sys_tsc = 0;
-        usr_tsc = 0;
+        t_idle = 1;
+        r_idle = 1;
+				//sys_tsc = 0;
+        //usr_tsc = 0;
 
         /*
          * TX burst queue drain
          */
-        diff_tsc = cur_tsc - prev_tsc;
-        if (unlikely(diff_tsc > drain_tsc)) {
+        //diff_tsc = cur_tsc - prev_tsc;
+        //if (unlikely(diff_tsc > drain_tsc)) {
             for (i = 0; i < qconf->nb_tx_port; i++) {
+								t_loops++;
                 port_id = qconf->tx_port_id[i];
                 if (qconf->tx_mbufs[port_id].len == 0)
                     continue;
 
-                idle = 0;
+                t_idle = 0;
 
                 send_burst(qconf,
                     qconf->tx_mbufs[port_id].len,
@@ -1370,13 +1375,14 @@ main_loop(void *arg)
                 qconf->tx_mbufs[port_id].len = 0;
             }
 
-            prev_tsc = cur_tsc;
-        }
+            //prev_tsc = cur_tsc;
+        //}
 
         /*
          * Read packet from RX queues
          */
         for (i = 0; i < qconf->nb_rx_queue; ++i) {
+						r_loops++;
             port_id = qconf->rx_queue_list[i].port_id;
             queue_id = qconf->rx_queue_list[i].queue_id;
             ctx = veth_ctx[port_id];
@@ -1392,7 +1398,7 @@ main_loop(void *arg)
             if (nb_rx == 0)
                 continue;
 
-            idle = 0;
+            r_idle = 0;
 
             /* Prefetch first packets */
             for (j = 0; j < PREFETCH_OFFSET && j < nb_rx; j++) {
@@ -1415,29 +1421,34 @@ main_loop(void *arg)
 
         process_msg_ring(qconf->proc_id);
 
-        div_tsc = rte_rdtsc();
+        //div_tsc = rte_rdtsc();
 
-        if (likely(lr->loop != NULL && (!idle || cur_tsc - usch_tsc > drain_tsc))) {
-            usch_tsc = cur_tsc;
+        if (likely(lr->loop != NULL && (cur_tsc - usch_tsc > drain_tsc))) {
+            u_loops++;
+						usch_tsc = cur_tsc;
             lr->loop(lr->arg);
         }
 
-        end_tsc = rte_rdtsc();
+        //end_tsc = rte_rdtsc();
 
-        if (usch_tsc == cur_tsc) {
-            usr_tsc = end_tsc - div_tsc;
-        }
+        //if (usch_tsc == cur_tsc) {
+        //    usr_tsc = end_tsc - div_tsc;
+        //}
 
-        if (!idle) {
-            sys_tsc = div_tsc - cur_tsc;
-            ff_status.sys_tsc += sys_tsc;
-        }
+        //if (!idle) {
+        //    sys_tsc = div_tsc - cur_tsc;
+        //    ff_status.sys_tsc += sys_tsc;
+        //}
 
-        ff_status.usr_tsc += usr_tsc;
-        ff_status.work_tsc += end_tsc - cur_tsc;
-        ff_status.idle_tsc += end_tsc - cur_tsc - usr_tsc - sys_tsc;
-
+        //ff_status.usr_tsc += usr_tsc;
+        //ff_status.work_tsc += end_tsc - cur_tsc;
+        //ff_status.idle_tsc += end_tsc - cur_tsc - usr_tsc - sys_tsc;
+				t_idle_count += t_idle;
+				r_idle_count += r_idle;
         ff_status.loops++;
+				if((ff_status.loops & 0x7ffff) == 0x7ffff){
+					printf("lps=%lu,t_lps=%ld,r_lps=%ld,u_lps=%ld,t_b_c=%ld,r_b_c=%ld\n",ff_status.loops,t_loops,r_loops,u_loops,ff_status.loops-t_idle_count,ff_status.loops-r_idle_count);
+				}
     }
 
     return 0;

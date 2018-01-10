@@ -987,9 +987,9 @@ ff_kevent_do_each(int kq, const struct kevent *changelist, int nchanges,
     void (*do_each)(void **, struct kevent *))
 {
     int rc;
-    struct timespec ts;
-    ts.tv_sec = 0;
-    ts.tv_nsec = 0;
+    //struct timespec ts;
+		//ts.tv_sec = 0;
+    //ts.tv_nsec = 0;
 
     struct sys_kevent_args ska = {
         kq,
@@ -997,7 +997,7 @@ ff_kevent_do_each(int kq, const struct kevent *changelist, int nchanges,
         nchanges,
         eventlist,
         nevents,
-        &ts,
+        timeout,
         do_each
     };
 
@@ -1008,7 +1008,7 @@ ff_kevent_do_each(int kq, const struct kevent *changelist, int nchanges,
     };
 
     if ((rc = kern_kevent(curthread, kq, nchanges, nevents, &k_ops, 
-            &ts)))
+            timeout)))
         goto kern_fail;
 
     rc = curthread->td_retval[0];

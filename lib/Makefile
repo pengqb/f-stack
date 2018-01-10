@@ -16,7 +16,7 @@ OVERRIDE_INCLUDES_ROOT:=${CURDIR}/include
 X86_INCLUDES=0
 
 HOST_OS:=$(shell uname -s)
-#DEBUG=-O0 -gdwarf-2 -g3
+DEBUG= -O0 -g
 #FF_NETGRAPH=1
 #FF_IPFW=1
 
@@ -40,7 +40,7 @@ INCLUDES+= -I./opt
 # Include search path for files that only include host OS headers
 HOST_INCLUDES= -I.
 ifndef DEBUG
-HOST_CFLAGS = -O2 -frename-registers  -funswitch-loops -fweb
+HOST_CFLAGS = -O0 -frename-registers  -funswitch-loops -fweb
 else
 HOST_CFLAGS = ${DEBUG} 
 endif
@@ -76,7 +76,7 @@ endif
 ifeq (${MACHINE_CPUARCH},arm)
 
 ifneq (${COMPILER_TYPE},clang)
-CFLAGS += -mno-thumb-interwork
+CFLAGS += -g -mno-thumb-interwork
 endif
 
 endif
