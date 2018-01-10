@@ -8,7 +8,8 @@
 #include <arpa/inet.h>
 #include <stdbool.h>
 #include <zconf.h>
-#include  <time.h>
+#include <time.h>
+#include "ff_api.h"
 
 int nConn = 0;
 int nReceiveMsg = 0;
