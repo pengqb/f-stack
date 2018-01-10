@@ -10,6 +10,7 @@
 #include <zconf.h>
 #include <time.h>
 #include <errno.h>
+#include <string.h>
 #include "ff_api.h"
 
 int nConn = 0;
@@ -47,7 +48,7 @@ int main(int argc, char *argv[]) {
             /*分配一个网络通信套接字，监听文件描述符sockfd*/
             int sockfd = ff_socket(PF_INET, SOCK_STREAM, 0);
             if (sockfd < 0) {
-                printf("ff_socket failed:%d, %s\n", errno,
+                printf("ff_socket failed:%s, %s\n", errno,
                        strerror(errno));
                 exit(1);
             }
@@ -55,7 +56,7 @@ int main(int argc, char *argv[]) {
             ff_setsockopt(sockfd, SOL_SOCKET, SO_REUSEPORT, (const void *) &opt, sizeof(opt));
             int ret = ff_connect(sockfd, (struct linux_sockaddr *) &my_addr, sizeof(my_addr));
             if (ret < 0) {
-                printf("ff_connect failed:%d, %s\n", errno,
+                printf("ff_connect failed:%s, %s\n", errno,
                        strerror(errno));
                 exit(1);
             }
