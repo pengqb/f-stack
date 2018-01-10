@@ -18,7 +18,8 @@ TARGET="helloworld"
 all:
 	cc -g -gdwarf-2  -I../lib -o ${TARGET} main.c ${LIBS}
 	cc -g -gdwarf-2  -I../lib -o ${TARGET}_epoll main_epoll.c ${LIBS}
+	cc -g -gdwarf-2  -I../lib -o qclient main_qclient.c ${LIBS}
 
 .PHONY: clean
 clean:
-	rm -f *.o ${TARGET} ${TARGET}_epoll
+	rm -f *.o ${TARGET} ${TARGET}_epoll qclient

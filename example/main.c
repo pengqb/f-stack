@@ -26,7 +26,7 @@ int *sockfds;
 int nConn = 0;
 int nReceiveMsg = 0;
 int servPorts;
-long lps_count=0,event_count=0,event_num=0;
+long lps_count = 0, event_count = 0, event_num = 0;
 
 char html[] = "HTTP/1.1 200 OK\r\n";
 
@@ -44,17 +44,17 @@ bool isContains(int elem, int *container, int nElems) {
 int loop(void *arg) {
     /* Wait for events to happen */
     //struct timespec delay;
-		//delay.tv_sec = 5;
-		//delay.tv_nsec = 0; // 0 ns
-		int nevents = ff_kevent(kq, NULL, 0, events, MAX_EVENTS, NULL);
-		lps_count++;
-		if(nevents >=0){
-			event_count++;
-			event_num+=nevents;
-		}
-		if ((lps_count & 0xffff) == 0xffff) {
-				printf("lps_count=%ld,e_c=%ld,e_n=%ld,time=%ld\n", lps_count,event_count,event_num,time(NULL));
-		}
+    //delay.tv_sec = 5;
+    //delay.tv_nsec = 0; // 0 ns
+    int nevents = ff_kevent(kq, NULL, 0, events, MAX_EVENTS, NULL);
+    lps_count++;
+    if (nevents >= 0) {
+        event_count++;
+        event_num += nevents;
+    }
+    if ((lps_count & 0xffff) == 0xffff) {
+        printf("lps_count=%ld,e_c=%ld,e_n=%ld,time=%ld\n", lps_count, event_count, event_num, time(NULL));
+    }
     int i;
     //printf("events num:%d\n", nevents);
     for (i = 0; i < nevents; ++i) {
@@ -126,7 +126,7 @@ int main(int argc, char *argv[]) {
             exit(1);
         }
         int on = 1;
-				ff_ioctl(sockfd, FIONBIO | FIOASYNC, &on);
+        ff_ioctl(sockfd, FIONBIO | FIOASYNC, &on);
 
         struct sockaddr_in my_addr;
         bzero(&my_addr, sizeof(my_addr));
