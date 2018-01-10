@@ -16,22 +16,17 @@ int nReceiveMsg = 0;
 char html[] = "clientsendabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz";
 
 int main(int argc, char *argv[]) {
-    if (argc < 7) {
-        printf("usage: %s <server ip> <begin port> <end port> <subprocesses> <conn num> <conn interval> <heartbeat interval> <management port>\n",
-               argv[0]);
-        return 1;
-    }
-    char *serIp = argv[1];
-    int beginPort = atoi(argv[2]);
-    int endPort = atoi(argv[3]);
-    int processes = atoi(argv[4]);
-    int connNum = atoi(argv[5]);
-    int connInterval = atoi(argv[6]);//unit second,connInterval秒内建立所有连接
-    int hbInterval = atoi(argv[7]);//unit second,hbInterval秒内所有连接发送一次心跳
-    int manPort = atoi(argv[8]);
-    printf("server ip: %s begin_port: %d end_port %d processes: %d conn num %d conn interval %d heartbeat interval %d man_port %d\n",
+    ff_init(argc, argv);
+
+    char *serIp = "10.11.1.3";
+    int beginPort = 8010;
+    int endPort = 8050;
+    int connNum = 30000;
+    int connInterval = 10;//unit second,connInterval秒内建立所有连接
+    int hbInterval = 10;//unit second,hbInterval秒内所有连接发送一次心跳
+    printf("server ip: %s begin_port: %d end_port %d conn num %d conn interval %d heartbeat interval %d \n",
            serIp, beginPort, endPort,
-           processes, connNum, connInterval, hbInterval, manPort);
+           connNum, connInterval, hbInterval);
     int servPorts = endPort - beginPort;
     int sockfds[servPorts][connNum];
     struct timeval delay;
