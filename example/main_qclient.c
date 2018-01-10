@@ -56,7 +56,7 @@ int main(int argc, char *argv[]) {
             }
             //…Ë÷√∂Àø⁄∏¥”√
             ff_setsockopt(sockfd, SOL_SOCKET, SO_REUSEPORT, (const void *) &opt, sizeof(opt));
-            int ret = ff_connect(sockfd, (struct sockaddr *) &my_addr, sizeof(struct sockaddr));
+            int ret = ff_connect(sockfd, (struct linux_sockaddr *) &my_addr, sizeof(struct linux_sockaddr));
             if (ret < 0) {
                 printf("ff_connect failed\n");
                 exit(1);
