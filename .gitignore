@@ -10,4 +10,5 @@ cmake-build-debug/
 tags
 helloworld
 helloworld_epoll
+qclient
 dpdk/x86_64-native-linuxapp-gcc
