@@ -68,11 +68,11 @@
 /*
  * Configurable number of RX/TX ring descriptors
  */
-#define RX_QUEUE_SIZE 512
-#define TX_QUEUE_SIZE 512
+#define RX_QUEUE_SIZE 1024
+#define TX_QUEUE_SIZE 1024
 
-#define MAX_PKT_BURST 32
-#define BURST_TX_DRAIN_US 8 /* TX drain every ~100us */
+#define MAX_PKT_BURST 256
+#define BURST_TX_DRAIN_US 100 /* TX drain every ~100us */
 
 /*
  * Try to avoid TX buffering if we have at least MAX_TX_BURST packets to send.
@@ -329,28 +329,29 @@ init_lcore_conf(void)
         lcore_conf.rx_queue_list[nb_rx_queue].port_id = port_id;
         lcore_conf.rx_queue_list[nb_rx_queue].queue_id = queueid;
         lcore_conf.nb_rx_queue++;
-/*
-				queueid++;
-				        printf("lcore: %u, port: %u, queue: %u\n", lcore_id, port_id, queueid);
-								        nb_rx_queue = lcore_conf.nb_rx_queue;
-												        lcore_conf.rx_queue_list[nb_rx_queue].port_id = port_id;
-																        lcore_conf.rx_queue_list[nb_rx_queue].queue_id = queueid;
-																				        lcore_conf.nb_rx_queue++;
+
+				/*queueid++;
+				printf("lcore: %u, port: %u, queue: %u\n", lcore_id, port_id, queueid);
+				nb_rx_queue = lcore_conf.nb_rx_queue;
+			  lcore_conf.rx_queue_list[nb_rx_queue].port_id = port_id;
+				lcore_conf.rx_queue_list[nb_rx_queue].queue_id = queueid;
+				lcore_conf.nb_rx_queue++;
 
 			  queueid++;
-				        printf("lcore: %u, port: %u, queue: %u\n", lcore_id, port_id, queueid);
-								        nb_rx_queue = lcore_conf.nb_rx_queue;
-												        lcore_conf.rx_queue_list[nb_rx_queue].port_id = port_id;
-																        lcore_conf.rx_queue_list[nb_rx_queue].queue_id = queueid;
-																				        lcore_conf.nb_rx_queue++;
+				printf("lcore: %u, port: %u, queue: %u\n", lcore_id, port_id, queueid);
+				nb_rx_queue = lcore_conf.nb_rx_queue;
+				lcore_conf.rx_queue_list[nb_rx_queue].port_id = port_id;
+				lcore_conf.rx_queue_list[nb_rx_queue].queue_id = queueid;
+				lcore_conf.nb_rx_queue++;
 
 				queueid++;
-				        printf("lcore: %u, port: %u, queue: %u\n", lcore_id, port_id, queueid);
-								        nb_rx_queue = lcore_conf.nb_rx_queue;
-												        lcore_conf.rx_queue_list[nb_rx_queue].port_id = port_id;
-																        lcore_conf.rx_queue_list[nb_rx_queue].queue_id = queueid;
-																				        lcore_conf.nb_rx_queue++;
+				printf("lcore: %u, port: %u, queue: %u\n", lcore_id, port_id, queueid);
+			  nb_rx_queue = lcore_conf.nb_rx_queue;
+				lcore_conf.rx_queue_list[nb_rx_queue].port_id = port_id;
+				lcore_conf.rx_queue_list[nb_rx_queue].queue_id = queueid;
+				lcore_conf.nb_rx_queue++;
 */
+
         lcore_conf.tx_queue_id[port_id] = queueid;
         lcore_conf.tx_port_id[lcore_conf.nb_tx_port] = port_id;
         lcore_conf.nb_tx_port++;
@@ -1350,8 +1351,8 @@ main_loop(void *arg)
     struct loop_routine *lr = (struct loop_routine *)arg;
 
     struct rte_mbuf *pkts_burst[MAX_PKT_BURST];
-    uint64_t cur_tsc, usch_tsc, div_tsc;//prev_tsc,diff_tsc, usr_tsc, sys_tsc, end_tsc;
-    long t_loops=0,r_loops=0,u_loops=0,t_idle_count=0,r_idle_count=0;
+    uint64_t cur_tsc, usch_tsc, div_tsc,prev_tsc,diff_tsc;//, usr_tsc, sys_tsc, end_tsc;
+    long t_loops=0,r_loops=0,u_loops=0,t_idle_count=0,r_idle_count=0,t_idle_len=0,r_idle_len=0;
 		int i, j,nb_rx;
 	  long t_idle,r_idle;
     uint8_t port_id, queue_id;
@@ -1380,8 +1381,8 @@ main_loop(void *arg)
         /*
          * TX burst queue drain
          */
-        //diff_tsc = cur_tsc - prev_tsc;
-        //if (unlikely(diff_tsc > drain_tsc)) {
+        diff_tsc = cur_tsc - prev_tsc;
+        if (unlikely(diff_tsc > drain_tsc)) {
             for (i = 0; i < qconf->nb_tx_port; i++) {
 								t_loops++;
                 port_id = qconf->tx_port_id[i];
@@ -1389,15 +1390,15 @@ main_loop(void *arg)
                     continue;
 
                 t_idle = 0;
-
+								t_idle_len += qconf->tx_mbufs[port_id].len;
                 send_burst(qconf,
                     qconf->tx_mbufs[port_id].len,
                     port_id);
                 qconf->tx_mbufs[port_id].len = 0;
             }
 
-            //prev_tsc = cur_tsc;
-        //}
+            prev_tsc = cur_tsc;
+        }
 
         /*
          * Read packet from RX queues
@@ -1420,6 +1421,7 @@ main_loop(void *arg)
                 continue;
 
             r_idle = 0;
+						r_idle_len +=nb_rx;
 
             /* Prefetch first packets */
             for (j = 0; j < PREFETCH_OFFSET && j < nb_rx; j++) {
@@ -1467,8 +1469,8 @@ main_loop(void *arg)
 				t_idle_count += t_idle;
 				r_idle_count += r_idle;
         ff_status.loops++;
-				if((ff_status.loops & 0x7ffff) == 0x7ffff){
-					printf("lps=%lu,t_lps=%ld,r_lps=%ld,u_lps=%ld,t_b_c=%ld,r_b_c=%ld\n",ff_status.loops,t_loops,r_loops,u_loops,ff_status.loops-t_idle_count,ff_status.loops-r_idle_count);
+				if((ff_status.loops & 0x1ffff) == 0x1ffff){
+					printf("lps=%lu,t_lps=%ld,r_lps=%ld,u_lps=%ld,t_b_c=%ld,r_b_c=%ld,t_b_l=%ld,r_b_l=%ld\n",ff_status.loops,t_loops,r_loops,u_loops,ff_status.loops-t_idle_count,ff_status.loops-r_idle_count,t_idle_len,r_idle_len);
 				}
     }
 

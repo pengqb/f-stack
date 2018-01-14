@@ -52,7 +52,7 @@ int loop(void *arg) {
         event_count++;
         event_num += nevents;
     }
-    if ((lps_count & 0xffff) == 0xffff) {
+    if ((lps_count & 0x3fff) == 0x3fff) {
         printf("lps_count=%ld,e_c=%ld,e_n=%ld,time=%ld\n", lps_count, event_count, event_num, time(NULL));
     }
     int i;
@@ -125,8 +125,8 @@ int main(int argc, char *argv[]) {
             printf("ff_socket failed\n");
             exit(1);
         }
-        int on = 1;
-        ff_ioctl(sockfd, FIONBIO | FIOASYNC, &on);
+        //int on = 1;
+        //ff_ioctl(sockfd, FIONBIO | FIOASYNC, &on);
 
         struct sockaddr_in my_addr;
         bzero(&my_addr, sizeof(my_addr));
@@ -140,12 +140,22 @@ int main(int argc, char *argv[]) {
             exit(1);
         }
 
-        ret = ff_listen(sockfd, MAX_EVENTS);
+        int sopt =262144,gopt;
+				int len = sizeof(sopt);
+				ff_setsockopt(sockfd,SOL_SOCKET,SO_SNDBUF,(const int*)&sopt, len);
+				ff_getsockopt(sockfd,SOL_SOCKET,SO_SNDBUF,&gopt, &len);
+				printf("so_sndbuf=%d\n",gopt);
+
+				ff_setsockopt(sockfd,SOL_SOCKET,SO_RCVBUF,(const int*)&sopt, len);
+				ff_getsockopt(sockfd,SOL_SOCKET,SO_RCVBUF,&gopt, &len);
+				printf("so_rcvbuf=%d\n",gopt);
+
+				ret = ff_listen(sockfd, MAX_EVENTS);
         if (ret < 0) {
             printf("ff_listen failed\n");
             exit(1);
         }
-        sockfdArray[i] = sockfd;
+				sockfdArray[i] = sockfd;
         EV_SET(&kevSet, sockfd, EVFILT_READ, EV_ADD, 0, MAX_EVENTS, NULL);
         /* Update kqueue */
         ff_kevent(kq, &kevSet, 1, NULL, 0, NULL);
