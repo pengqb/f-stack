@@ -59,6 +59,7 @@
 #include "ff_msg.h"
 #include "ff_api.h"
 
+#define NB_RX_QUEUE_PER_CORE 4
 #define MEMPOOL_CACHE_SIZE 2048
 
 #define DISPATCH_RING_SIZE 2048
@@ -100,37 +101,37 @@ static struct rte_timer freebsd_clock;
 
 // Mellanox Linux's driver key
 static uint8_t default_rsskey_40bytes[40] = {
-    0xd1, 0x81, 0xc6, 0x2c, 0xf7, 0xf4, 0xdb, 0x5b,
-    0x19, 0x83, 0xa2, 0xfc, 0x94, 0x3e, 0x1a, 0xdb,
-    0xd9, 0x38, 0x9e, 0x6b, 0xd1, 0x03, 0x9c, 0x2c,
-    0xa7, 0x44, 0x99, 0xad, 0x59, 0x3d, 0x56, 0xd9,
-    0xf3, 0x25, 0x3c, 0x06, 0x2a, 0xdc, 0x1f, 0xfc
+        0xd1, 0x81, 0xc6, 0x2c, 0xf7, 0xf4, 0xdb, 0x5b,
+        0x19, 0x83, 0xa2, 0xfc, 0x94, 0x3e, 0x1a, 0xdb,
+        0xd9, 0x38, 0x9e, 0x6b, 0xd1, 0x03, 0x9c, 0x2c,
+        0xa7, 0x44, 0x99, 0xad, 0x59, 0x3d, 0x56, 0xd9,
+        0xf3, 0x25, 0x3c, 0x06, 0x2a, 0xdc, 0x1f, 0xfc
 };
 
 static struct rte_eth_conf default_port_conf = {
-    .rxmode = {
-        .mq_mode = ETH_MQ_RX_RSS,
-        .max_rx_pkt_len = ETHER_MAX_LEN,
-        .split_hdr_size = 0, /**< hdr buf size */
-        .header_split   = 0, /**< Header Split disabled */
-        .hw_ip_checksum = 0, /**< IP checksum offload disabled */
-        .hw_vlan_filter = 0, /**< VLAN filtering disabled */
-        .hw_vlan_strip  = 0, /**< VLAN strip disabled. */
-        .hw_vlan_extend = 0, /**< Extended VLAN disabled. */
-        .jumbo_frame    = 0, /**< Jumbo Frame Support disabled */
-        .hw_strip_crc   = 0, /**< CRC stripped by hardware */
-        .enable_lro     = 0, /**< LRO disabled */
-    },
-    .rx_adv_conf = {
-        .rss_conf = {
-            .rss_key = default_rsskey_40bytes,
-            .rss_key_len = 40,
-            .rss_hf = ETH_RSS_PROTO_MASK,
+        .rxmode = {
+                .mq_mode = ETH_MQ_RX_RSS,
+                .max_rx_pkt_len = ETHER_MAX_LEN,
+                .split_hdr_size = 0, /**< hdr buf size */
+                .header_split   = 0, /**< Header Split disabled */
+                .hw_ip_checksum = 0, /**< IP checksum offload disabled */
+                .hw_vlan_filter = 0, /**< VLAN filtering disabled */
+                .hw_vlan_strip  = 0, /**< VLAN strip disabled. */
+                .hw_vlan_extend = 0, /**< Extended VLAN disabled. */
+                .jumbo_frame    = 0, /**< Jumbo Frame Support disabled */
+                .hw_strip_crc   = 0, /**< CRC stripped by hardware */
+                .enable_lro     = 0, /**< LRO disabled */
         },
-    },
-    .txmode = {
-        .mq_mode = ETH_MQ_TX_NONE,
-    },
+        .rx_adv_conf = {
+                .rss_conf = {
+                        .rss_key = default_rsskey_40bytes,
+                        .rss_key_len = 40,
+                        .rss_hf = ETH_RSS_PROTO_MASK,
+                },
+        },
+        .txmode = {
+                .mq_mode = ETH_MQ_TX_NONE,
+        },
 };
 
 struct mbuf_table {
@@ -190,14 +191,13 @@ extern void ff_hardclock(void);
 
 static void
 ff_hardclock_job(__rte_unused struct rte_timer *timer,
-    __rte_unused void *arg) {
+                 __rte_unused void *arg) {
     ff_hardclock();
     ff_update_current_ts();
 }
 
 struct ff_dpdk_if_context *
-ff_dpdk_register_if(void *sc, void *ifp, struct ff_port_cfg *cfg)
-{
+ff_dpdk_register_if(void *sc, void *ifp, struct ff_port_cfg *cfg) {
     struct ff_dpdk_if_context *ctx;
 
     ctx = calloc(1, sizeof(struct ff_dpdk_if_context));
@@ -213,16 +213,14 @@ ff_dpdk_register_if(void *sc, void *ifp, struct ff_port_cfg *cfg)
 }
 
 void
-ff_dpdk_deregister_if(struct ff_dpdk_if_context *ctx)
-{
+ff_dpdk_deregister_if(struct ff_dpdk_if_context *ctx) {
     free(ctx);
 }
 
 static void
-check_all_ports_link_status(void)
-{
-    #define CHECK_INTERVAL 100 /* 100ms */
-    #define MAX_CHECK_TIME 90  /* 9s (90 * 100ms) in total */
+check_all_ports_link_status(void) {
+#define CHECK_INTERVAL 100 /* 100ms */
+#define MAX_CHECK_TIME 90  /* 9s (90 * 100ms) in total */
 
     uint8_t portid, count, all_ports_up, print_flag = 0;
     struct rte_eth_link link;
@@ -243,12 +241,12 @@ check_all_ports_link_status(void)
             if (print_flag == 1) {
                 if (link.link_status) {
                     printf("Port %d Link Up - speed %u "
-                        "Mbps - %s\n", (int)portid,
-                        (unsigned)link.link_speed,
-                        (link.link_duplex == ETH_LINK_FULL_DUPLEX) ?
-                        ("full-duplex") : ("half-duplex\n"));
+                                   "Mbps - %s\n", (int) portid,
+                           (unsigned) link.link_speed,
+                           (link.link_duplex == ETH_LINK_FULL_DUPLEX) ?
+                           ("full-duplex") : ("half-duplex\n"));
                 } else {
-                    printf("Port %d Link Down\n", (int)portid);
+                    printf("Port %d Link Down\n", (int) portid);
                 }
                 continue;
             }
@@ -278,8 +276,7 @@ check_all_ports_link_status(void)
 }
 
 static int
-init_lcore_conf(void)
-{
+init_lcore_conf(void) {
     uint8_t nb_dev_ports = rte_eth_dev_count();
     if (nb_dev_ports == 0) {
         rte_exit(EXIT_FAILURE, "No probed ethernet devices\n");
@@ -314,45 +311,24 @@ init_lcore_conf(void)
         uint16_t port_id = ff_global_cfg.dpdk.portid_list[j];
         struct ff_port_cfg *pconf = &ff_global_cfg.dpdk.port_cfgs[port_id];
 
-        int queueid = -1;
+        int rx_queueid = -1, tx_queueid = -1;
         int i;
         for (i = 0; i < pconf->nb_lcores; i++) {
             if (pconf->lcore_list[i] == lcore_id) {
-                queueid = i;
+                tx_queueid = i;
+            }
+            for(int j = 0; j< NB_RX_QUEUE_PER_CORE ;j++){
+                rx_queueid = NB_RX_QUEUE_PER_CORE * i + j;
+                printf("lcore: %u, port: %u, queue: %u\n", lcore_id, port_id, rx_queueid);
+                lcore_conf.rx_queue_list[rx_queueid].port_id = port_id;
+                lcore_conf.rx_queue_list[rx_queueid].queue_id = rx_queueid;
             }
         }
-        if (queueid < 0) {
+        if (tx_queueid < 0) {
             continue;
         }
-        printf("lcore: %u, port: %u, queue: %u\n", lcore_id, port_id, queueid);
-        uint16_t nb_rx_queue = lcore_conf.nb_rx_queue;
-        lcore_conf.rx_queue_list[nb_rx_queue].port_id = port_id;
-        lcore_conf.rx_queue_list[nb_rx_queue].queue_id = queueid;
-        lcore_conf.nb_rx_queue++;
 
-				/*queueid++;
-				printf("lcore: %u, port: %u, queue: %u\n", lcore_id, port_id, queueid);
-				nb_rx_queue = lcore_conf.nb_rx_queue;
-			  lcore_conf.rx_queue_list[nb_rx_queue].port_id = port_id;
-				lcore_conf.rx_queue_list[nb_rx_queue].queue_id = queueid;
-				lcore_conf.nb_rx_queue++;
-
-			  queueid++;
-				printf("lcore: %u, port: %u, queue: %u\n", lcore_id, port_id, queueid);
-				nb_rx_queue = lcore_conf.nb_rx_queue;
-				lcore_conf.rx_queue_list[nb_rx_queue].port_id = port_id;
-				lcore_conf.rx_queue_list[nb_rx_queue].queue_id = queueid;
-				lcore_conf.nb_rx_queue++;
-
-				queueid++;
-				printf("lcore: %u, port: %u, queue: %u\n", lcore_id, port_id, queueid);
-			  nb_rx_queue = lcore_conf.nb_rx_queue;
-				lcore_conf.rx_queue_list[nb_rx_queue].port_id = port_id;
-				lcore_conf.rx_queue_list[nb_rx_queue].queue_id = queueid;
-				lcore_conf.nb_rx_queue++;
-*/
-
-        lcore_conf.tx_queue_id[port_id] = queueid;
+        lcore_conf.tx_queue_id[port_id] = tx_queueid;
         lcore_conf.tx_port_id[lcore_conf.nb_tx_port] = port_id;
         lcore_conf.nb_tx_port++;
 
@@ -368,28 +344,27 @@ init_lcore_conf(void)
 }
 
 static int
-init_mem_pool(void)
-{
+init_mem_pool(void) {
     uint8_t nb_ports = ff_global_cfg.dpdk.nb_ports;
     uint32_t nb_lcores = ff_global_cfg.dpdk.nb_procs;
     uint32_t nb_tx_queue = nb_lcores;
     uint32_t nb_rx_queue = lcore_conf.nb_rx_queue * nb_lcores;
 
     unsigned nb_mbuf = RTE_MAX (
-        (nb_rx_queue*RX_QUEUE_SIZE          +
-        nb_ports*nb_lcores*MAX_PKT_BURST    +
-        nb_ports*nb_tx_queue*TX_QUEUE_SIZE  +
-        nb_lcores*MEMPOOL_CACHE_SIZE +
-        nb_ports*KNI_MBUF_MAX +
-        nb_ports*KNI_QUEUE_SIZE +
-        nb_lcores*nb_ports*DISPATCH_RING_SIZE),
-        (unsigned)8192);
+            (nb_rx_queue * RX_QUEUE_SIZE +
+             nb_ports * nb_lcores * MAX_PKT_BURST +
+             nb_ports * nb_tx_queue * TX_QUEUE_SIZE +
+             nb_lcores * MEMPOOL_CACHE_SIZE +
+             nb_ports * KNI_MBUF_MAX +
+             nb_ports * KNI_QUEUE_SIZE +
+             nb_lcores * nb_ports * DISPATCH_RING_SIZE),
+            (unsigned) 8192);
 
     unsigned socketid = 0;
     uint16_t i, lcore_id;
     char s[64];
 
-		printf("pqb nb_ports=%d,nb_lcores=%d\n", nb_ports,nb_lcores);
+    printf("pqb nb_ports=%d,nb_lcores=%d\n", nb_ports, nb_lcores);
     for (i = 0; i < ff_global_cfg.dpdk.nb_procs; i++) {
         lcore_id = ff_global_cfg.dpdk.proc_lcore[i];
         if (numa_on) {
@@ -398,7 +373,7 @@ init_mem_pool(void)
 
         if (socketid >= NB_SOCKETS) {
             rte_exit(EXIT_FAILURE, "Socket %d of lcore %u is out of range %d\n",
-                socketid, i, NB_SOCKETS);
+                     socketid, i, NB_SOCKETS);
         }
 
         if (pktmbuf_pool[socketid] != NULL) {
@@ -408,12 +383,12 @@ init_mem_pool(void)
         if (rte_eal_process_type() == RTE_PROC_PRIMARY) {
             snprintf(s, sizeof(s), "mbuf_pool_%d", socketid);
 
-						printf("pqb s=%s,nb_mbuf=%d\n", s,nb_mbuf);
+            printf("pqb s=%s,nb_mbuf=%d\n", s, nb_mbuf);
 
             pktmbuf_pool[socketid] =
-                rte_pktmbuf_pool_create(s, nb_mbuf,
-                    MEMPOOL_CACHE_SIZE, 0,
-                    RTE_MBUF_DEFAULT_BUF_SIZE, socketid);
+                    rte_pktmbuf_pool_create(s, nb_mbuf,
+                                            MEMPOOL_CACHE_SIZE, 0,
+                                            RTE_MBUF_DEFAULT_BUF_SIZE, socketid);
         } else {
             snprintf(s, sizeof(s), "mbuf_pool_%d", socketid);
             pktmbuf_pool[socketid] = rte_mempool_lookup(s);
@@ -430,8 +405,7 @@ init_mem_pool(void)
 }
 
 static struct rte_ring *
-create_ring(const char *name, unsigned count, int socket_id, unsigned flags)
-{
+create_ring(const char *name, unsigned count, int socket_id, unsigned flags) {
     struct rte_ring *ring;
 
     if (name == NULL)
@@ -449,8 +423,7 @@ create_ring(const char *name, unsigned count, int socket_id, unsigned flags)
 }
 
 static int
-init_dispatch_ring(void)
-{
+init_dispatch_ring(void) {
     int j;
     char name_buf[RTE_RING_NAMESIZE];
     int queueid;
@@ -467,25 +440,25 @@ init_dispatch_ring(void)
             snprintf(name_buf, RTE_RING_NAMESIZE, "ring_ptr_p%d", portid);
 
             dispatch_ring[portid] = rte_zmalloc(name_buf,
-                sizeof(struct rte_ring *) * nb_queues,
-                RTE_CACHE_LINE_SIZE);
+                                                sizeof(struct rte_ring *) * nb_queues,
+                                                RTE_CACHE_LINE_SIZE);
             if (dispatch_ring[portid] == NULL) {
                 rte_exit(EXIT_FAILURE, "rte_zmalloc(%s (struct rte_ring*)) "
-                    "failed\n", name_buf);
+                        "failed\n", name_buf);
             }
         }
 
-        for(queueid = 0; queueid < nb_queues; ++queueid) {
+        for (queueid = 0; queueid < nb_queues; ++queueid) {
             snprintf(name_buf, RTE_RING_NAMESIZE, "dispatch_ring_p%d_q%d",
-                portid, queueid);
+                     portid, queueid);
             dispatch_ring[portid][queueid] = create_ring(name_buf,
-                DISPATCH_RING_SIZE, socketid, RING_F_SC_DEQ);
+                                                         DISPATCH_RING_SIZE, socketid, RING_F_SC_DEQ);
 
             if (dispatch_ring[portid][queueid] == NULL)
                 rte_panic("create ring:%s failed!\n", name_buf);
 
             printf("create ring:%s success, %u ring entries are now free!\n",
-                name_buf, rte_ring_free_count(dispatch_ring[portid][queueid]));
+                   name_buf, rte_ring_free_count(dispatch_ring[portid][queueid]));
         }
     }
 
@@ -494,18 +467,16 @@ init_dispatch_ring(void)
 
 static void
 ff_msg_init(struct rte_mempool *mp,
-    __attribute__((unused)) void *opaque_arg,
-    void *obj, __attribute__((unused)) unsigned i)
-{
-    struct ff_msg *msg = (struct ff_msg *)obj;
+            __attribute__((unused)) void *opaque_arg,
+            void *obj, __attribute__((unused)) unsigned i) {
+    struct ff_msg *msg = (struct ff_msg *) obj;
     msg->msg_type = FF_UNKNOWN;
-    msg->buf_addr = (char *)msg + sizeof(struct ff_msg);
+    msg->buf_addr = (char *) msg + sizeof(struct ff_msg);
     msg->buf_len = mp->elt_size - sizeof(struct ff_msg);
 }
 
 static int
-init_msg_ring(void)
-{
+init_msg_ring(void) {
     uint16_t i;
     uint16_t nb_procs = ff_global_cfg.dpdk.nb_procs;
     unsigned socketid = lcore_conf.socket_id;
@@ -513,10 +484,10 @@ init_msg_ring(void)
     /* Create message buffer pool */
     if (rte_eal_process_type() == RTE_PROC_PRIMARY) {
         message_pool = rte_mempool_create(FF_MSG_POOL,
-           MSG_RING_SIZE * 2 * nb_procs,
-           MAX_MSG_BUF_SIZE, MSG_RING_SIZE / 2, 0,
-           NULL, NULL, ff_msg_init, NULL,
-           socketid, 0);
+                                          MSG_RING_SIZE * 2 * nb_procs,
+                                          MAX_MSG_BUF_SIZE, MSG_RING_SIZE / 2, 0,
+                                          NULL, NULL, ff_msg_init, NULL,
+                                          socketid, 0);
     } else {
         message_pool = rte_mempool_lookup(FF_MSG_POOL);
     }
@@ -525,19 +496,19 @@ init_msg_ring(void)
         rte_panic("Create msg mempool failed\n");
     }
 
-    for(i = 0; i < nb_procs; ++i) {
+    for (i = 0; i < nb_procs; ++i) {
         snprintf(msg_ring[i].ring_name[0], RTE_RING_NAMESIZE,
-            "%s%u", FF_MSG_RING_IN, i);
+                 "%s%u", FF_MSG_RING_IN, i);
         snprintf(msg_ring[i].ring_name[1], RTE_RING_NAMESIZE,
-            "%s%u", FF_MSG_RING_OUT, i);
+                 "%s%u", FF_MSG_RING_OUT, i);
 
         msg_ring[i].ring[0] = create_ring(msg_ring[i].ring_name[0],
-            MSG_RING_SIZE, socketid, RING_F_SP_ENQ | RING_F_SC_DEQ);
+                                          MSG_RING_SIZE, socketid, RING_F_SP_ENQ | RING_F_SC_DEQ);
         if (msg_ring[i].ring[0] == NULL)
             rte_panic("create ring::%s failed!\n", msg_ring[i].ring_name[0]);
 
         msg_ring[i].ring[1] = create_ring(msg_ring[i].ring_name[1],
-            MSG_RING_SIZE, socketid, RING_F_SP_ENQ | RING_F_SC_DEQ);
+                                          MSG_RING_SIZE, socketid, RING_F_SP_ENQ | RING_F_SC_DEQ);
         if (msg_ring[i].ring[1] == NULL)
             rte_panic("create ring::%s failed!\n", msg_ring[i].ring_name[0]);
     }
@@ -546,15 +517,14 @@ init_msg_ring(void)
 }
 
 static int
-init_kni(void)
-{
+init_kni(void) {
     int nb_ports = rte_eth_dev_count();
     kni_accept = 0;
-    if(strcasecmp(ff_global_cfg.kni.method, "accept") == 0)
+    if (strcasecmp(ff_global_cfg.kni.method, "accept") == 0)
         kni_accept = 1;
 
     ff_kni_init(nb_ports, ff_global_cfg.kni.tcp_port,
-        ff_global_cfg.kni.udp_port);
+                ff_global_cfg.kni.udp_port);
 
     unsigned socket_id = lcore_conf.socket_id;
     struct rte_mempool *mbuf_pool = pktmbuf_pool[socket_id];
@@ -570,8 +540,7 @@ init_kni(void)
 }
 
 static void
-set_rss_table(uint8_t port_id, uint16_t reta_size, uint16_t nb_queues)
-{
+set_rss_table(uint8_t port_id, uint16_t reta_size, uint16_t nb_queues) {
     if (reta_size == 0) {
         return;
     }
@@ -580,7 +549,7 @@ set_rss_table(uint8_t port_id, uint16_t reta_size, uint16_t nb_queues)
     struct rte_eth_rss_reta_entry64 reta_conf[reta_conf_size];
 
     /* config HW indirection table */
-    unsigned i, j, hash=0;
+    unsigned i, j, hash = 0;
     for (i = 0; i < reta_conf_size; i++) {
         reta_conf[i].mask = ~0ULL;
         for (j = 0; j < RTE_RETA_GROUP_SIZE; j++) {
@@ -590,13 +559,12 @@ set_rss_table(uint8_t port_id, uint16_t reta_size, uint16_t nb_queues)
 
     if (rte_eth_dev_rss_reta_update(port_id, reta_conf, reta_size)) {
         rte_exit(EXIT_FAILURE, "port[%d], failed to update rss table\n",
-            port_id);
+                 port_id);
     }
 }
 
 static int
-init_port_start(void)
-{
+init_port_start(void) {
     int nb_ports = ff_global_cfg.dpdk.nb_ports;
     unsigned socketid = rte_lcore_to_socket_id(rte_lcore_id());
     struct rte_mempool *mbuf_pool = pktmbuf_pool[socketid];
@@ -605,38 +573,39 @@ init_port_start(void)
     for (i = 0; i < nb_ports; i++) {
         uint16_t port_id = ff_global_cfg.dpdk.portid_list[i];
         struct ff_port_cfg *pconf = &ff_global_cfg.dpdk.port_cfgs[port_id];
-        uint16_t nb_queues = pconf->nb_lcores;
+        uint16_t nb_rx_queues = pconf->nb_lcores * NB_RX_QUEUE_PER_CORE;
+        uint16_t nb_tx_queues = pconf->nb_lcores;
 
         struct rte_eth_dev_info dev_info;
         rte_eth_dev_info_get(port_id, &dev_info);
 
-        if (nb_queues > dev_info.max_rx_queues) {
+        if (nb_rx_queues > dev_info.max_rx_queues) {
             rte_exit(EXIT_FAILURE, "num_procs[%d] bigger than max_rx_queues[%d]\n",
-                nb_queues,
-                dev_info.max_rx_queues);
+                     nb_rx_queues,
+                     dev_info.max_rx_queues);
         }
 
-        if (nb_queues > dev_info.max_tx_queues) {
+        if (nb_tx_queues > dev_info.max_tx_queues) {
             rte_exit(EXIT_FAILURE, "num_procs[%d] bigger than max_tx_queues[%d]\n",
-                nb_queues,
-                dev_info.max_tx_queues);
+                     nb_tx_queues,
+                     dev_info.max_tx_queues);
         }
 
         struct ether_addr addr;
         rte_eth_macaddr_get(port_id, &addr);
         printf("Port %u MAC: %02" PRIx8 " %02" PRIx8 " %02" PRIx8
-                   " %02" PRIx8 " %02" PRIx8 " %02" PRIx8 "\n",
-                (unsigned)port_id,
-                addr.addr_bytes[0], addr.addr_bytes[1],
-                addr.addr_bytes[2], addr.addr_bytes[3],
-                addr.addr_bytes[4], addr.addr_bytes[5]);
+                       " %02" PRIx8 " %02" PRIx8 " %02" PRIx8 "\n",
+               (unsigned) port_id,
+               addr.addr_bytes[0], addr.addr_bytes[1],
+               addr.addr_bytes[2], addr.addr_bytes[3],
+               addr.addr_bytes[4], addr.addr_bytes[5]);
 
         rte_memcpy(pconf->mac,
-            addr.addr_bytes, ETHER_ADDR_LEN);
+                   addr.addr_bytes, ETHER_ADDR_LEN);
 
         /* Clear txq_flags - we do not need multi-mempool and refcnt */
         dev_info.default_txconf.txq_flags = ETH_TXQ_FLAGS_NOMULTMEMP |
-            ETH_TXQ_FLAGS_NOREFCOUNT;
+                                            ETH_TXQ_FLAGS_NOREFCOUNT;
 
         /* Disable features that are not supported by port's HW */
         if (!(dev_info.tx_offload_capa & DEV_TX_OFFLOAD_UDP_CKSUM)) {
@@ -683,13 +652,13 @@ init_port_start(void)
         port_conf.rxmode.hw_strip_crc = 1;
 
         /* FIXME: Enable TCP LRO ?*/
-        #if 0
+#if 0
         if (dev_info.rx_offload_capa & DEV_RX_OFFLOAD_TCP_LRO) {
             printf("LRO is supported\n");
             port_conf.rxmode.enable_lro = 1;
             pconf->hw_features.rx_lro = 1;
         }
-        #endif
+#endif
 
         /* Set Rx checksum checking */
         if ((dev_info.rx_offload_capa & DEV_RX_OFFLOAD_IPV4_CKSUM) &&
@@ -726,27 +695,29 @@ init_port_start(void)
 
             rss_reta_size[port_id] = dev_info.reta_size;
             printf("port[%d]: rss table size: %d\n", port_id,
-                dev_info.reta_size);
+                   dev_info.reta_size);
         }
 
         if (rte_eal_process_type() != RTE_PROC_PRIMARY) {
             continue;
         }
 
-        int ret = rte_eth_dev_configure(port_id, nb_queues, nb_queues, &port_conf);
+        int ret = rte_eth_dev_configure(port_id, nb_rx_queues, nb_tx_queues, &port_conf);
         if (ret != 0) {
             return ret;
         }
         uint16_t q;
-        for (q = 0; q < nb_queues; q++) {
+        for (q = 0; q < nb_tx_queues; q++) {
             ret = rte_eth_tx_queue_setup(port_id, q, TX_QUEUE_SIZE,
-                socketid, &dev_info.default_txconf);
+                                         socketid, &dev_info.default_txconf);
             if (ret < 0) {
                 return ret;
             }
+        }
 
+        for (q = 0; q < nb_rx_queues; q++) {
             ret = rte_eth_rx_queue_setup(port_id, q, RX_QUEUE_SIZE,
-                socketid, &dev_info.default_rxconf, mbuf_pool);
+                                         socketid, &dev_info.default_rxconf, mbuf_pool);
             if (ret < 0) {
                 return ret;
             }
@@ -757,7 +728,7 @@ init_port_start(void)
             return ret;
         }
 
-        if (nb_queues > 1) {
+        if (nb_rx_queues > 1) {
             /* set HW rss hash function to Toeplitz. */
             if (!rte_eth_dev_filter_supported(port_id, RTE_ETH_FILTER_HASH)) {
                 struct rte_eth_hash_filter_info info = {0};
@@ -765,13 +736,13 @@ init_port_start(void)
                 info.info.global_conf.hash_func = RTE_ETH_HASH_FUNCTION_TOEPLITZ;
 
                 if (rte_eth_dev_filter_ctrl(port_id, RTE_ETH_FILTER_HASH,
-                    RTE_ETH_FILTER_SET, &info) < 0) {
+                                            RTE_ETH_FILTER_SET, &info) < 0) {
                     rte_exit(EXIT_FAILURE, "port[%d] set hash func failed\n",
-                        port_id);
+                             port_id);
                 }
             }
 
-            set_rss_table(port_id, dev_info.reta_size, nb_queues);
+            set_rss_table(port_id, dev_info.reta_size, nb_rx_queues);
         }
 
         /* Enable RX in promiscuous mode for the Ethernet device. */
@@ -799,16 +770,15 @@ init_port_start(void)
 }
 
 static int
-init_clock(void)
-{
+init_clock(void) {
     rte_timer_subsystem_init();
     uint64_t hz = rte_get_timer_hz();
-    uint64_t intrs = MS_PER_S/ff_global_cfg.freebsd.hz;
-    uint64_t tsc = (hz + MS_PER_S - 1) / MS_PER_S*intrs;
+    uint64_t intrs = MS_PER_S / ff_global_cfg.freebsd.hz;
+    uint64_t tsc = (hz + MS_PER_S - 1) / MS_PER_S * intrs;
 
     rte_timer_init(&freebsd_clock);
     rte_timer_reset(&freebsd_clock, tsc, PERIODICAL,
-        rte_lcore_id(), &ff_hardclock_job, NULL);
+                    rte_lcore_id(), &ff_hardclock_job, NULL);
 
     ff_update_current_ts();
 
@@ -816,15 +786,14 @@ init_clock(void)
 }
 
 int
-ff_dpdk_init(int argc, char **argv)
-{
+ff_dpdk_init(int argc, char **argv) {
     if (ff_global_cfg.dpdk.nb_procs < 1 ||
         ff_global_cfg.dpdk.nb_procs > RTE_MAX_LCORE ||
         ff_global_cfg.dpdk.proc_id >= ff_global_cfg.dpdk.nb_procs ||
         ff_global_cfg.dpdk.proc_id < 0) {
         printf("param num_procs[%d] or proc_id[%d] error!\n",
-            ff_global_cfg.dpdk.nb_procs,
-            ff_global_cfg.dpdk.proc_id);
+               ff_global_cfg.dpdk.nb_procs,
+               ff_global_cfg.dpdk.proc_id);
         exit(1);
     }
 
@@ -859,8 +828,7 @@ ff_dpdk_init(int argc, char **argv)
 }
 
 static void
-ff_veth_input(const struct ff_dpdk_if_context *ctx, struct rte_mbuf *pkt)
-{
+ff_veth_input(const struct ff_dpdk_if_context *ctx, struct rte_mbuf *pkt) {
     uint8_t rx_csum = ctx->hw_features.rx_csum;
     if (rx_csum) {
         if (pkt->ol_flags & (PKT_RX_IP_CKSUM_BAD | PKT_RX_L4_CKSUM_BAD)) {
@@ -884,7 +852,7 @@ ff_veth_input(const struct ff_dpdk_if_context *ctx, struct rte_mbuf *pkt)
 
     struct rte_mbuf *pn = pkt->next;
     void *prev = hdr;
-    while(pn != NULL) {
+    while (pn != NULL) {
         data = rte_pktmbuf_mtod(pn, void*);
         len = rte_pktmbuf_data_len(pn);
 
@@ -902,32 +870,30 @@ ff_veth_input(const struct ff_dpdk_if_context *ctx, struct rte_mbuf *pkt)
 }
 
 static enum FilterReturn
-protocol_filter(const void *data, uint16_t len)
-{
-    if(len < ETHER_HDR_LEN)
+protocol_filter(const void *data, uint16_t len) {
+    if (len < ETHER_HDR_LEN)
         return FILTER_UNKNOWN;
 
     const struct ether_hdr *hdr;
-    hdr = (const struct ether_hdr *)data;
+    hdr = (const struct ether_hdr *) data;
 
-    if(ntohs(hdr->ether_type) == ETHER_TYPE_ARP)
+    if (ntohs(hdr->ether_type) == ETHER_TYPE_ARP)
         return FILTER_ARP;
 
     if (!enable_kni) {
         return FILTER_UNKNOWN;
     }
 
-    if(ntohs(hdr->ether_type) != ETHER_TYPE_IPv4)
+    if (ntohs(hdr->ether_type) != ETHER_TYPE_IPv4)
         return FILTER_UNKNOWN;
 
     return ff_kni_proto_filter(data + ETHER_HDR_LEN,
-        len - ETHER_HDR_LEN);
+                               len - ETHER_HDR_LEN);
 }
 
 static inline void
 process_packets(uint8_t port_id, uint16_t queue_id, struct rte_mbuf **bufs,
-    uint16_t count, const struct ff_dpdk_if_context *ctx, int pkts_from_ring)
-{
+                uint16_t count, const struct ff_dpdk_if_context *ctx, int pkts_from_ring) {
     struct lcore_conf *qconf = &lcore_conf;
     uint16_t nb_queues = qconf->nb_queue_list[port_id];
 
@@ -966,8 +932,8 @@ process_packets(uint8_t port_id, uint16_t queue_id, struct rte_mbuf **bufs,
             struct rte_mbuf *mbuf_clone;
             if (!pkts_from_ring) {
                 uint16_t j;
-                for(j = 0; j < nb_queues; ++j) {
-                    if(j == queue_id)
+                for (j = 0; j < nb_queues; ++j) {
+                    if (j == queue_id)
                         continue;
 
                     unsigned socket_id = 0;
@@ -977,7 +943,7 @@ process_packets(uint8_t port_id, uint16_t queue_id, struct rte_mbuf **bufs,
                     }
                     mbuf_pool = pktmbuf_pool[socket_id];
                     mbuf_clone = rte_pktmbuf_clone(rtem, mbuf_pool);
-                    if(mbuf_clone) {
+                    if (mbuf_clone) {
                         int ret = rte_ring_enqueue(dispatch_ring[port_id][j], mbuf_clone);
                         if (ret < 0)
                             rte_pktmbuf_free(mbuf_clone);
@@ -988,14 +954,14 @@ process_packets(uint8_t port_id, uint16_t queue_id, struct rte_mbuf **bufs,
             if (enable_kni && rte_eal_process_type() == RTE_PROC_PRIMARY) {
                 mbuf_pool = pktmbuf_pool[qconf->socket_id];
                 mbuf_clone = rte_pktmbuf_clone(rtem, mbuf_pool);
-                if(mbuf_clone) {
+                if (mbuf_clone) {
                     ff_kni_enqueue(port_id, mbuf_clone);
                 }
             }
 
             ff_veth_input(ctx, rtem);
         } else if (enable_kni && ((filter == FILTER_KNI && kni_accept) ||
-            (filter == FILTER_UNKNOWN && !kni_accept)) ) {
+                                  (filter == FILTER_UNKNOWN && !kni_accept))) {
             ff_kni_enqueue(port_id, rtem);
         } else {
             ff_veth_input(ctx, rtem);
@@ -1005,14 +971,13 @@ process_packets(uint8_t port_id, uint16_t queue_id, struct rte_mbuf **bufs,
 
 static inline int
 process_dispatch_ring(uint8_t port_id, uint16_t queue_id,
-    struct rte_mbuf **pkts_burst, const struct ff_dpdk_if_context *ctx)
-{
+                      struct rte_mbuf **pkts_burst, const struct ff_dpdk_if_context *ctx) {
     /* read packet from ring buf and to process */
     uint16_t nb_rb;
     nb_rb = rte_ring_dequeue_burst(dispatch_ring[port_id][queue_id],
-        (void **)pkts_burst, MAX_PKT_BURST,NULL);
+                                   (void **) pkts_burst, MAX_PKT_BURST, NULL);
 
-    if(nb_rb > 0) {
+    if (nb_rb > 0) {
         process_packets(port_id, queue_id, pkts_burst, nb_rb, ctx, 1);
     }
 
@@ -1020,11 +985,10 @@ process_dispatch_ring(uint8_t port_id, uint16_t queue_id,
 }
 
 static inline void
-handle_sysctl_msg(struct ff_msg *msg)
-{
+handle_sysctl_msg(struct ff_msg *msg) {
     int ret = ff_sysctl(msg->sysctl.name, msg->sysctl.namelen,
-        msg->sysctl.old, msg->sysctl.oldlenp, msg->sysctl.new,
-        msg->sysctl.newlen);
+                        msg->sysctl.old, msg->sysctl.oldlenp, msg->sysctl.new,
+                        msg->sysctl.newlen);
 
     if (ret < 0) {
         msg->result = errno;
@@ -1034,8 +998,7 @@ handle_sysctl_msg(struct ff_msg *msg)
 }
 
 static inline void
-handle_ioctl_msg(struct ff_msg *msg)
-{
+handle_ioctl_msg(struct ff_msg *msg) {
     int fd, ret;
     fd = ff_socket(AF_INET, SOCK_DGRAM, 0);
     if (fd < 0) {
@@ -1047,7 +1010,7 @@ handle_ioctl_msg(struct ff_msg *msg)
 
     ff_close(fd);
 
-done:
+    done:
     if (ret < 0) {
         msg->result = errno;
     } else {
@@ -1056,10 +1019,9 @@ done:
 }
 
 static inline void
-handle_route_msg(struct ff_msg *msg)
-{
+handle_route_msg(struct ff_msg *msg) {
     int ret = ff_rtioctl(msg->route.fib, msg->route.data,
-        &msg->route.len, msg->route.maxlen);
+                         &msg->route.len, msg->route.maxlen);
     if (ret < 0) {
         msg->result = errno;
     } else {
@@ -1068,9 +1030,9 @@ handle_route_msg(struct ff_msg *msg)
 }
 
 static struct ff_top_args ff_status;
+
 static inline void
-handle_top_msg(struct ff_msg *msg)
-{
+handle_top_msg(struct ff_msg *msg) {
     msg->top = ff_status;
     msg->result = 0;
 }
@@ -1129,14 +1091,12 @@ done:
 #endif
 
 static inline void
-handle_default_msg(struct ff_msg *msg)
-{
+handle_default_msg(struct ff_msg *msg) {
     msg->result = ENOTSUP;
 }
 
 static inline void
-handle_msg(struct ff_msg *msg, uint16_t proc_id)
-{
+handle_msg(struct ff_msg *msg, uint16_t proc_id) {
     switch (msg->msg_type) {
         case FF_SYSCTL:
             handle_sysctl_msg(msg);
@@ -1168,13 +1128,12 @@ handle_msg(struct ff_msg *msg, uint16_t proc_id)
 }
 
 static inline int
-process_msg_ring(uint16_t proc_id)
-{
+process_msg_ring(uint16_t proc_id) {
     void *msg;
     int ret = rte_ring_dequeue(msg_ring[proc_id].ring[0], &msg);
 
     if (unlikely(ret == 0)) {
-        handle_msg((struct ff_msg *)msg, proc_id);
+        handle_msg((struct ff_msg *) msg, proc_id);
     }
 
     return 0;
@@ -1182,14 +1141,13 @@ process_msg_ring(uint16_t proc_id)
 
 /* Send burst of packets on an output interface */
 static inline int
-send_burst(struct lcore_conf *qconf, uint16_t n, uint8_t port)
-{
+send_burst(struct lcore_conf *qconf, uint16_t n, uint8_t port) {
     struct rte_mbuf **m_table;
     int ret;
     uint16_t queueid;
 
     queueid = qconf->tx_queue_id[port];
-    m_table = (struct rte_mbuf **)qconf->tx_mbufs[port].m_table;
+    m_table = (struct rte_mbuf **) qconf->tx_mbufs[port].m_table;
 
     if (unlikely(qconf->pcap[port] != NULL)) {
         uint16_t i;
@@ -1210,8 +1168,7 @@ send_burst(struct lcore_conf *qconf, uint16_t n, uint8_t port)
 
 /* Enqueue a single packet, and send burst if queue is filled */
 static inline int
-send_single_packet(struct rte_mbuf *m, uint8_t port)
-{
+send_single_packet(struct rte_mbuf *m, uint8_t port) {
     uint16_t len;
     struct lcore_conf *qconf;
 
@@ -1232,8 +1189,7 @@ send_single_packet(struct rte_mbuf *m, uint8_t port)
 
 int
 ff_dpdk_if_send(struct ff_dpdk_if_context *ctx, void *m,
-    int total)
-{
+                int total) {
     struct rte_mempool *mbuf_pool = pktmbuf_pool[lcore_conf.socket_id];
     struct rte_mbuf *head = rte_pktmbuf_alloc(mbuf_pool);
     if (head == NULL) {
@@ -1246,7 +1202,7 @@ ff_dpdk_if_send(struct ff_dpdk_if_context *ctx, void *m,
 
     int off = 0;
     struct rte_mbuf *cur = head, *prev = NULL;
-    while(total > 0) {
+    while (total > 0) {
         if (cur == NULL) {
             cur = rte_pktmbuf_alloc(mbuf_pool);
             if (cur == NULL) {
@@ -1286,7 +1242,7 @@ ff_dpdk_if_send(struct ff_dpdk_if_context *ctx, void *m,
         /* ipv6 not supported yet */
         struct ipv4_hdr *iph;
         int iph_len;
-        iph = (struct ipv4_hdr *)(data + ETHER_HDR_LEN);
+        iph = (struct ipv4_hdr *) (data + ETHER_HDR_LEN);
         iph_len = (iph->version_ihl & 0x0f) << 2;
 
         head->ol_flags |= PKT_TX_IP_CKSUM | PKT_TX_IPV4;
@@ -1297,7 +1253,7 @@ ff_dpdk_if_send(struct ff_dpdk_if_context *ctx, void *m,
     if (ctx->hw_features.tx_csum_l4) {
         struct ipv4_hdr *iph;
         int iph_len;
-        iph = (struct ipv4_hdr *)(data + ETHER_HDR_LEN);
+        iph = (struct ipv4_hdr *) (data + ETHER_HDR_LEN);
         iph_len = (iph->version_ihl & 0x0f) << 2;
 
         if (offload.tcp_csum) {
@@ -1324,7 +1280,7 @@ ff_dpdk_if_send(struct ff_dpdk_if_context *ctx, void *m,
         if (offload.tso_seg_size) {
             struct tcp_hdr *tcph;
             int tcph_len;
-            tcph = (struct tcp_hdr *)((char *)iph + iph_len);
+            tcph = (struct tcp_hdr *) ((char *) iph + iph_len);
             tcph_len = (tcph->data_off & 0xf0) >> 2;
             tcph->cksum = rte_ipv4_phdr_cksum(iph, PKT_TX_TCP_SEG);
 
@@ -1346,19 +1302,18 @@ ff_dpdk_if_send(struct ff_dpdk_if_context *ctx, void *m,
 }
 
 static int
-main_loop(void *arg)
-{
-    struct loop_routine *lr = (struct loop_routine *)arg;
+main_loop(void *arg) {
+    struct loop_routine *lr = (struct loop_routine *) arg;
 
     struct rte_mbuf *pkts_burst[MAX_PKT_BURST];
-    uint64_t cur_tsc, usch_tsc, div_tsc,prev_tsc,diff_tsc;//, usr_tsc, sys_tsc, end_tsc;
-    long t_loops=0,r_loops=0,u_loops=0,t_idle_count=0,r_idle_count=0,t_idle_len=0,r_idle_len=0;
-		int i, j,nb_rx;
-	  long t_idle,r_idle;
+    uint64_t cur_tsc, usch_tsc, div_tsc, prev_tsc, diff_tsc;//, usr_tsc, sys_tsc, end_tsc;
+    long t_loops = 0, r_loops = 0, u_loops = 0, t_idle_count = 0, r_idle_count = 0, t_idle_len = 0, r_idle_len = 0;
+    int i, j, nb_rx;
+    long t_idle, r_idle;
     uint8_t port_id, queue_id;
     struct lcore_conf *qconf;
     const uint64_t drain_tsc = (rte_get_tsc_hz() + US_PER_S - 1) /
-        US_PER_S * BURST_TX_DRAIN_US;
+                               US_PER_S * BURST_TX_DRAIN_US;
     struct ff_dpdk_if_context *ctx;
 
     //prev_tsc = 0;
@@ -1370,12 +1325,12 @@ main_loop(void *arg)
         cur_tsc = rte_rdtsc();
         //if (unlikely(freebsd_clock.expire < cur_tsc)) {
         //    printf("rte_timer_m,expire=%lu,cur_tsc=%lu\n",freebsd_clock.expire,cur_tsc);
-				//		rte_timer_manage();
+        //		rte_timer_manage();
         //}
 
         t_idle = 1;
         r_idle = 1;
-				//sys_tsc = 0;
+        //sys_tsc = 0;
         //usr_tsc = 0;
 
         /*
@@ -1384,16 +1339,16 @@ main_loop(void *arg)
         diff_tsc = cur_tsc - prev_tsc;
         if (unlikely(diff_tsc > drain_tsc)) {
             for (i = 0; i < qconf->nb_tx_port; i++) {
-								t_loops++;
+                t_loops++;
                 port_id = qconf->tx_port_id[i];
                 if (qconf->tx_mbufs[port_id].len == 0)
                     continue;
 
                 t_idle = 0;
-								t_idle_len += qconf->tx_mbufs[port_id].len;
+                t_idle_len += qconf->tx_mbufs[port_id].len;
                 send_burst(qconf,
-                    qconf->tx_mbufs[port_id].len,
-                    port_id);
+                           qconf->tx_mbufs[port_id].len,
+                           port_id);
                 qconf->tx_mbufs[port_id].len = 0;
             }
 
@@ -1404,7 +1359,7 @@ main_loop(void *arg)
          * Read packet from RX queues
          */
         for (i = 0; i < qconf->nb_rx_queue; ++i) {
-						r_loops++;
+            r_loops++;
             port_id = qconf->rx_queue_list[i].port_id;
             queue_id = qconf->rx_queue_list[i].queue_id;
             ctx = veth_ctx[port_id];
@@ -1416,23 +1371,23 @@ main_loop(void *arg)
             process_dispatch_ring(port_id, queue_id, pkts_burst, ctx);
 
             nb_rx = rte_eth_rx_burst(port_id, queue_id, pkts_burst,
-                MAX_PKT_BURST);
+                                     MAX_PKT_BURST);
             if (nb_rx == 0)
                 continue;
 
             r_idle = 0;
-						r_idle_len +=nb_rx;
+            r_idle_len += nb_rx;
 
             /* Prefetch first packets */
             for (j = 0; j < PREFETCH_OFFSET && j < nb_rx; j++) {
                 rte_prefetch0(rte_pktmbuf_mtod(
-                        pkts_burst[j], void *));
+                                      pkts_burst[j], void *));
             }
 
             /* Prefetch and handle already prefetched packets */
             for (j = 0; j < (nb_rx - PREFETCH_OFFSET); j++) {
                 rte_prefetch0(rte_pktmbuf_mtod(pkts_burst[
-                        j + PREFETCH_OFFSET], void *));
+                                                       j + PREFETCH_OFFSET], void *));
                 process_packets(port_id, queue_id, &pkts_burst[j], 1, ctx, 0);
             }
 
@@ -1448,7 +1403,7 @@ main_loop(void *arg)
 
         if (likely(lr->loop != NULL && (cur_tsc - usch_tsc > drain_tsc))) {
             u_loops++;
-						usch_tsc = cur_tsc;
+            usch_tsc = cur_tsc;
             lr->loop(lr->arg);
         }
 
@@ -1466,12 +1421,14 @@ main_loop(void *arg)
         //ff_status.usr_tsc += usr_tsc;
         //ff_status.work_tsc += end_tsc - cur_tsc;
         //ff_status.idle_tsc += end_tsc - cur_tsc - usr_tsc - sys_tsc;
-				t_idle_count += t_idle;
-				r_idle_count += r_idle;
+        t_idle_count += t_idle;
+        r_idle_count += r_idle;
         ff_status.loops++;
-				if((ff_status.loops & 0x1ffff) == 0x1ffff){
-					printf("lps=%lu,t_lps=%ld,r_lps=%ld,u_lps=%ld,t_b_c=%ld,r_b_c=%ld,t_b_l=%ld,r_b_l=%ld\n",ff_status.loops,t_loops,r_loops,u_loops,ff_status.loops-t_idle_count,ff_status.loops-r_idle_count,t_idle_len,r_idle_len);
-				}
+        if ((ff_status.loops & 0x1ffff) == 0x1ffff) {
+            printf("lps=%lu,t_lps=%ld,r_lps=%ld,u_lps=%ld,t_b_c=%ld,r_b_c=%ld,t_b_l=%ld,r_b_l=%ld\n", ff_status.loops,
+                   t_loops, r_loops, u_loops, ff_status.loops - t_idle_count, ff_status.loops - r_idle_count,
+                   t_idle_len, r_idle_len);
+        }
     }
 
     return 0;
@@ -1497,7 +1454,7 @@ ff_dpdk_if_up(void) {
 void
 ff_dpdk_run(loop_func_t loop, void *arg) {
     struct loop_routine *lr = rte_malloc(NULL,
-        sizeof(struct loop_routine), 0);
+                                         sizeof(struct loop_routine), 0);
     lr->loop = loop;
     lr->arg = arg;
     rte_eal_mp_remote_launch(main_loop, lr, CALL_MASTER);
@@ -1506,28 +1463,26 @@ ff_dpdk_run(loop_func_t loop, void *arg) {
 }
 
 void
-ff_dpdk_pktmbuf_free(void *m)
-{
-    rte_pktmbuf_free((struct rte_mbuf *)m);
+ff_dpdk_pktmbuf_free(void *m) {
+    rte_pktmbuf_free((struct rte_mbuf *) m);
 }
 
 static uint32_t
 toeplitz_hash(unsigned keylen, const uint8_t *key,
-    unsigned datalen, const uint8_t *data)
-{
+              unsigned datalen, const uint8_t *data) {
     uint32_t hash = 0, v;
     u_int i, b;
 
     /* XXXRW: Perhaps an assertion about key length vs. data length? */
 
-    v = (key[0]<<24) + (key[1]<<16) + (key[2] <<8) + key[3];
+    v = (key[0] << 24) + (key[1] << 16) + (key[2] << 8) + key[3];
     for (i = 0; i < datalen; i++) {
         for (b = 0; b < 8; b++) {
-            if (data[i] & (1<<(7-b)))
+            if (data[i] & (1 << (7 - b)))
                 hash ^= v;
             v <<= 1;
             if ((i + 4) < keylen &&
-                (key[i+4] & (1<<(7-b))))
+                (key[i + 4] & (1 << (7 - b))))
                 v |= 1;
         }
     }
@@ -1536,8 +1491,7 @@ toeplitz_hash(unsigned keylen, const uint8_t *key,
 
 int
 ff_rss_check(void *softc, uint32_t saddr, uint32_t daddr,
-    uint16_t sport, uint16_t dport)
-{
+             uint16_t sport, uint16_t dport) {
     struct lcore_conf *qconf = &lcore_conf;
     struct ff_dpdk_if_context *ctx = ff_veth_softc_to_hostc(softc);
     uint16_t nb_queues = qconf->nb_queue_list[ctx->port_id];
@@ -1550,7 +1504,7 @@ ff_rss_check(void *softc, uint32_t saddr, uint32_t daddr,
     uint16_t queueid = qconf->tx_queue_id[ctx->port_id];
 
     uint8_t data[sizeof(saddr) + sizeof(daddr) + sizeof(sport) +
-        sizeof(dport)];
+                 sizeof(dport)];
 
     unsigned datalen = 0;
 
@@ -1567,13 +1521,12 @@ ff_rss_check(void *softc, uint32_t saddr, uint32_t daddr,
     datalen += sizeof(dport);
 
     uint32_t hash = toeplitz_hash(sizeof(default_rsskey_40bytes),
-        default_rsskey_40bytes, datalen, data);
+                                  default_rsskey_40bytes, datalen, data);
 
     return ((hash & (reta_size - 1)) % nb_queues) == queueid;
 }
 
 void
-ff_regist_packet_dispatcher(dispatch_func_t func)
-{
+ff_regist_packet_dispatcher(dispatch_func_t func) {
     packet_dispatcher = func;
 }
