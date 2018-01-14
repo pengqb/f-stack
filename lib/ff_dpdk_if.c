@@ -322,7 +322,8 @@ init_lcore_conf(void) {
                 printf("lcore: %u, port: %u, queue: %u\n", lcore_id, port_id, rx_queueid);
                 lcore_conf.rx_queue_list[rx_queueid].port_id = port_id;
                 lcore_conf.rx_queue_list[rx_queueid].queue_id = rx_queueid;
-            }
+     						lcore_conf.nb_rx_queue++;
+		 				}
         }
         if (tx_queueid < 0) {
             continue;
@@ -333,7 +334,7 @@ init_lcore_conf(void) {
         lcore_conf.nb_tx_port++;
 
         lcore_conf.pcap[port_id] = pconf->pcap;
-        lcore_conf.nb_queue_list[port_id] = pconf->nb_lcores;
+        lcore_conf.nb_queue_list[port_id] = pconf->nb_lcores *NB_RX_QUEUE_PER_CORE;
     }
 
     if (lcore_conf.nb_rx_queue == 0) {
@@ -435,7 +436,7 @@ init_dispatch_ring(void) {
     for (j = 0; j < nb_ports; j++) {
         uint16_t portid = ff_global_cfg.dpdk.portid_list[j];
         struct ff_port_cfg *pconf = &ff_global_cfg.dpdk.port_cfgs[portid];
-        int nb_queues = pconf->nb_lcores;
+        int nb_queues = pconf->nb_lcores * NB_RX_QUEUE_PER_CORE;
         if (dispatch_ring[portid] == NULL) {
             snprintf(name_buf, RTE_RING_NAMESIZE, "ring_ptr_p%d", portid);
 
